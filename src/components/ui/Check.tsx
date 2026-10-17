@@ -1,7 +1,7 @@
 import { motion } from 'motion/react'
 import { cn } from '../../lib/cn'
 
-/** Animated checkbox button. */
+/** Square checkbox: paper fill + ink check when done. */
 export function Check({
   checked,
   onChange,
@@ -17,7 +17,7 @@ export function Check({
   className?: string
   partial?: boolean
 }) {
-  const dim = { sm: 'size-4 rounded-[5px]', md: 'size-5 rounded-md', lg: 'size-6 rounded-lg' }[size]
+  const dim = { sm: 'size-4', md: 'size-[18px]', lg: 'size-6' }[size]
   return (
     <motion.button
       type="button"
@@ -28,32 +28,27 @@ export function Check({
         e.stopPropagation()
         onChange(!checked)
       }}
-      whileTap={{ scale: 0.82 }}
+      whileTap={{ scale: 0.85 }}
       className={cn(
-        'relative grid shrink-0 cursor-pointer place-items-center border transition-colors duration-200',
+        'relative grid shrink-0 cursor-pointer place-items-center rounded-[3px] border-[1.5px] transition-colors duration-150',
         dim,
-        checked
-          ? 'border-gold-400 bg-gradient-to-b from-gold-400 to-gold-600 shadow-[0_0_14px_-2px_rgb(246_196_99/0.65)]'
-          : partial
-            ? 'border-gold-500/60 bg-gold-500/15'
-            : 'border-white/20 bg-white/[0.03] hover:border-gold-400/70 hover:bg-gold-400/10',
+        checked ? 'border-paper bg-paper' : partial ? 'border-mid bg-raised-3' : 'border-edge-2 bg-transparent hover:border-mid',
         className,
       )}
     >
-      <svg viewBox="0 0 16 16" className="size-[78%]" fill="none" aria-hidden>
+      <svg viewBox="0 0 16 16" className="size-[80%]" fill="none" aria-hidden>
         {checked ? (
           <motion.path
-            d="M3.5 8.4 6.6 11.3 12.6 4.9"
-            stroke="#1b1206"
-            strokeWidth={2.3}
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            d="M3.2 8.3 6.5 11.4 12.8 4.6"
+            stroke="#0b0b0c"
+            strokeWidth={2.6}
+            strokeLinecap="square"
             initial={{ pathLength: 0 }}
             animate={{ pathLength: 1 }}
-            transition={{ duration: 0.28, ease: 'easeOut' }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
           />
         ) : partial ? (
-          <path d="M4.5 8h7" stroke="#f6c463" strokeWidth={2.2} strokeLinecap="round" />
+          <path d="M4 8h8" stroke="#a3a3ab" strokeWidth={2.4} />
         ) : null}
       </svg>
     </motion.button>

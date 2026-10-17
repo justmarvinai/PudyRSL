@@ -1,96 +1,67 @@
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
-import { useEffect, useId, type ReactNode } from 'react'
+import { useEffect } from 'react'
 import { cn } from '../../lib/cn'
 
-export function ProgressRing({
+/** Segmented progress: one block per item (falls back to a bar above 40). */
+export function Segments({
   value,
-  size = 56,
-  stroke = 5,
-  children,
+  total,
+  color = 'var(--color-paper)',
   className,
-  tone = 'gold',
+  height = 6,
+  marks,
 }: {
-  /** 0–100 */
   value: number
-  size?: number
-  stroke?: number
-  children?: ReactNode
+  total: number
+  color?: string
   className?: string
-  tone?: 'gold' | 'ok' | 'epic' | 'info'
+  height?: number
+  /** Item numbers (1-based) to mark, e.g. milestones. */
+  marks?: number[]
 }) {
-  const id = 'ring' + useId().replace(/[^a-zA-Z0-9_-]/g, '')
-  const r = (size - stroke) / 2
-  const c = 2 * Math.PI * r
-  const v = Math.max(0, Math.min(100, value))
-  const stops = {
-    gold: ['#ffe2a1', '#e8a83a'],
-    ok: ['#9ff5cf', '#2fc987'],
-    epic: ['#dcc2ff', '#9b5cff'],
-    info: ['#bcd8ff', '#4f8cff'],
-  }[tone]
+  if (total > 40) return <Bar value={total ? (value / total) * 100 : 0} color={color} className={className} height={height} />
   return (
-    <div className={cn('relative inline-grid shrink-0 place-items-center', className)} style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <defs>
-          <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor={stops[0]} />
-            <stop offset="100%" stopColor={stops[1]} />
-          </linearGradient>
-        </defs>
-        <circle cx={size / 2} cy={size / 2} r={r} stroke="rgb(255 255 255 / 0.07)" strokeWidth={stroke} fill="none" />
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke={`url(#${id})`}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          fill="none"
-          strokeDasharray={c}
-          initial={{ strokeDashoffset: c }}
-          animate={{ strokeDashoffset: c - (v / 100) * c }}
-          transition={{ type: 'spring', stiffness: 60, damping: 16 }}
-          style={{ filter: v > 0 ? `drop-shadow(0 0 6px ${stops[1]}55)` : undefined }}
-        />
-      </svg>
-      <div className="absolute inset-0 grid place-items-center">{children}</div>
+    <div className={cn('flex w-full gap-[2px]', className)} style={{ height }}>
+      {Array.from({ length: total }).map((_, i) => {
+        const on = i < value
+        const mark = marks?.includes(i + 1)
+        return (
+          <motion.span
+            key={i}
+            className="relative flex-1 rounded-[1px]"
+            initial={false}
+            animate={{ backgroundColor: on ? color : 'rgb(255 255 255 / 0.08)' }}
+            transition={{ duration: 0.25, delay: on ? i * 0.012 : 0 }}
+          >
+            {mark && <span className="absolute -top-1 left-1/2 h-1 w-px -translate-x-1/2 bg-mid" />}
+          </motion.span>
+        )
+      })}
     </div>
   )
 }
 
-export function ProgressBar({
+/** Thin continuous bar; `low` draws a tick (e.g. the low end of a budget range). */
+export function Bar({
   value,
+  color = 'var(--color-paper)',
   className,
-  tone = 'gold',
-  height = 6,
-  markers,
+  height = 4,
+  ticks,
 }: {
+  /** 0–100 */
   value: number
+  color?: string
   className?: string
-  tone?: 'gold' | 'ok' | 'epic' | 'info' | 'warn' | 'bad'
   height?: number
-  /** Percent positions for tick marks. */
-  markers?: number[]
+  ticks?: number[]
 }) {
   const v = Math.max(0, Math.min(100, value))
-  const fill = {
-    gold: 'from-gold-300 to-gold-600',
-    ok: 'from-[#9ff5cf] to-ok',
-    epic: 'from-[#dcc2ff] to-epic',
-    info: 'from-[#bcd8ff] to-info',
-    warn: 'from-[#ffe3a6] to-warn',
-    bad: 'from-[#ffb3b3] to-bad',
-  }[tone]
   return (
-    <div className={cn('relative w-full overflow-hidden rounded-full bg-white/[0.06]', className)} style={{ height }}>
-      <motion.div
-        className={cn('h-full rounded-full bg-gradient-to-r', fill)}
-        initial={{ width: 0 }}
-        animate={{ width: `${v}%` }}
-        transition={{ type: 'spring', stiffness: 70, damping: 18 }}
-      />
-      {markers?.map((m) => (
-        <span key={m} className="absolute top-0 h-full w-px bg-white/25" style={{ left: `${m}%` }} />
+    <div className={cn('relative w-full overflow-hidden rounded-[1px] bg-white/[0.08]', className)} style={{ height }}>
+      <motion.div className="h-full" style={{ backgroundColor: color }} initial={{ width: 0 }} animate={{ width: `${v}%` }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }} />
+      {ticks?.map((t) => (
+        <span key={t} className="absolute top-0 h-full w-px bg-mid" style={{ left: `${t}%` }} />
       ))}
     </div>
   )
@@ -106,8 +77,8 @@ export function AnimatedNumber({ value, format = (n: number) => Math.round(n).to
       mv.set(value)
       return
     }
-    const controls = animate(mv, value, { duration: 0.7, ease: [0.22, 1, 0.36, 1] })
+    const controls = animate(mv, value, { duration: 0.6, ease: [0.22, 1, 0.36, 1] })
     return () => controls.stop()
   }, [value, mv, reduce])
-  return <motion.span className="tabular-nums">{text}</motion.span>
+  return <motion.span>{text}</motion.span>
 }

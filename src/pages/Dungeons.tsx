@@ -1,30 +1,30 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowRight, Bug, Castle, Flame, Mountain, Snowflake, Swords, Target, Trophy } from 'lucide-react'
+import { ArrowRight, Minus, Plus } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import { Link, Navigate, useParams } from 'react-router'
-import { Sigil } from '../components/champion/Sigil'
+import { Portrait } from '../components/champion/Portrait'
 import { TeamLineup } from '../components/champion/TeamLineup'
 import { PageHeader } from '../components/layout/PageHeader'
-import { Segmented } from '../components/ui/Fields'
+import { SegmentPicker, Segmented } from '../components/ui/Fields'
 import { LabelTag, Rich } from '../components/ui/Rich'
 import { TabBar } from '../components/ui/Tabs'
-import { Callout, Card, Pill, SectionTitle } from '../components/ui/primitives'
+import { Callout, Panel, SectionHead, Tag } from '../components/ui/primitives'
 import { arena, dungeons, dungeonsIntro, farmOrder, hardModeNote, iceGolemThresholds, statTargets, type Dungeon } from '../data/dungeons'
-import type { Affinity } from '../data/types'
 import { cn } from '../lib/cn'
 import { stageOf } from '../lib/derived'
+import { affinityColor, affinityIcon, dungeonColor } from '../lib/rsl'
 import { useStore } from '../lib/store'
 
-const icons = { spider: Bug, dragon: Flame, 'fire-knight': Castle, 'ice-golem': Snowflake }
-
 const tabs = [
-  ...dungeons.map((d) => {
-    const Icon = icons[d.id]
-    return { key: d.id, label: d.short, icon: <Icon className="size-4" />, to: `/dungeons/${d.id}`, badge: <span className="text-[0.62rem] text-fg-subtle">#{d.priority}</span> }
-  }),
-  { key: 'arena', label: 'Arena', icon: <Trophy className="size-4" />, to: '/dungeons/arena', badge: <span className="text-[0.62rem] text-fg-subtle">#6</span> },
+  ...dungeons.map((d) => ({
+    key: d.id,
+    label: d.short,
+    color: dungeonColor[d.id],
+    to: `/dungeons/${d.id}`,
+    badge: <span className="text-[0.66rem] text-low">#{d.priority}</span>,
+  })),
+  { key: 'arena', label: 'Arena', color: dungeonColor.arena, to: '/dungeons/arena', badge: <span className="text-[0.66rem] text-low">#6</span> },
 ]
-
-const affinityTone: Record<Affinity, 'magic' | 'force' | 'spirit' | 'void'> = { Magic: 'magic', Force: 'force', Spirit: 'spirit', Void: 'void' }
 
 function StageTracker({ d }: { d: Dungeon }) {
   const nums = useStore((s) => s.nums)
@@ -32,52 +32,59 @@ function StageTracker({ d }: { d: Dungeon }) {
   const stage = stageOf(nums, d.stageKey)
   const set = (v: number) => setNum(`stage.${d.stageKey}`, Math.max(0, Math.min(25, v)))
   const next = d.milestones.find((m) => m.stage > stage)
+  const color = dungeonColor[d.id]
   return (
-    <Card>
-      <SectionTitle
-        eyebrow="Your progress"
-        title="Highest stage cleared"
-        action={
-          <div className="flex items-center gap-2">
-            <button type="button" className="btn size-8 p-0" onClick={() => set(stage - 1)} aria-label="Lower stage">
-              −
-            </button>
-            <motion.div key={stage} initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="w-12 text-center font-display text-2xl font-bold text-gold-300 tabular-nums">
-              {stage || '–'}
-            </motion.div>
-            <button type="button" className="btn size-8 p-0" onClick={() => set(stage + 1)} aria-label="Raise stage">
-              +
-            </button>
-          </div>
-        }
-      />
-      <input
-        type="range"
-        min={0}
-        max={25}
-        value={stage}
-        onChange={(e) => set(Number(e.target.value))}
-        className="w-full cursor-pointer accent-[#e8a83a]"
-        aria-label={`${d.short} stage`}
-      />
-      <div className="relative mt-1 h-10">
+    <Panel
+      kicker="Your progress"
+      title="Highest stage cleared"
+      action={
+        <div className="flex items-center gap-1">
+          <button type="button" className="btn size-8 p-0" onClick={() => set(stage - 1)} aria-label="Lower stage">
+            <Minus className="size-3.5" />
+          </button>
+          <button type="button" className="btn size-8 p-0" onClick={() => set(stage + 1)} aria-label="Raise stage">
+            <Plus className="size-3.5" />
+          </button>
+        </div>
+      }
+    >
+      <div className="flex items-end gap-3">
+        <motion.div key={stage} initial={{ y: -8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="t-display text-[4.5rem] leading-[0.8]" style={{ color: stage ? color : 'var(--color-edge-2)' }}>
+          {stage || '0'}
+        </motion.div>
+        <div className="pb-1 text-[0.8rem] font-semibold text-low">/ 25</div>
+      </div>
+
+      <SegmentPicker value={stage} max={25} onChange={set} color={color} marks={d.milestones.map((m) => m.stage)} label={`${d.short} stage`} className="mt-5" />
+      <div className="relative mt-2 h-4">
         {d.milestones.map((m) => (
-          <div key={m.label} className="absolute -translate-x-1/2 text-center" style={{ left: `${(m.stage / 25) * 100}%` }}>
-            <div className={cn('mx-auto h-2 w-px', stage >= m.stage ? 'bg-gold-400' : 'bg-white/20')} />
-            <div className={cn('mt-1 text-[0.68rem] font-bold tabular-nums', stage >= m.stage ? 'text-gold-300' : 'text-fg-subtle')}>{m.stage}</div>
-          </div>
+          <span
+            key={m.label}
+            className={cn('absolute -translate-x-1/2 text-[0.66rem] font-bold tabular-nums', stage >= m.stage ? 'text-hi' : 'text-low')}
+            style={{ left: `${((m.stage - 0.5) / 25) * 100}%` }}
+          >
+            {m.stage}
+          </span>
         ))}
       </div>
-      <ul className="mt-1 space-y-1.5 text-[0.78rem]">
-        {d.milestones.map((m) => (
-          <li key={m.label} className={cn('flex items-center gap-2', stage >= m.stage ? 'text-ok' : 'text-fg-muted')}>
-            <Target className="size-3.5 shrink-0" />
-            {m.label}
-          </li>
-        ))}
+
+      <ul className="mt-3 space-y-1.5 text-[0.8rem]">
+        {d.milestones.map((m) => {
+          const hit = stage >= m.stage
+          return (
+            <li key={m.label} className={cn('flex items-center gap-2.5', hit ? 'text-hi' : 'text-low')}>
+              <span className="size-2 shrink-0 rounded-[1px]" style={{ background: hit ? 'var(--color-ok)' : 'var(--color-edge-2)' }} />
+              {m.label}
+            </li>
+          )
+        })}
       </ul>
-      {next && <div className="mt-3 text-[0.75rem] text-fg-subtle">Next milestone: stage {next.stage} ({next.stage - stage} to go).</div>}
-    </Card>
+      {next && (
+        <div className="mt-3 text-[0.76rem] text-low">
+          Next milestone: stage <span className="font-bold text-hi">{next.stage}</span> ({next.stage - stage} to go).
+        </div>
+      )}
+    </Panel>
   )
 }
 
@@ -86,45 +93,54 @@ function DungeonView({ d }: { d: Dungeon }) {
   const setUi = useStore((s) => s.setUi)
   const wave = d.hasWave1 ? teamWave : 2
   const isIG = d.id === 'ice-golem'
+  const color = dungeonColor[d.id]
 
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-          <SectionTitle eyebrow={`Priority #${d.priority}`} title="Mechanics" label="Sourced" />
-          <Rich as="p" text={`${d.mechanics.charAt(0).toUpperCase()}${d.mechanics.slice(1)}`} className="text-[0.88rem] leading-relaxed text-fg-muted" />
-          <div className="mt-4 flex flex-wrap gap-2">
+    <div className="space-y-14">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <Panel className="xl:col-span-2" kicker={`Priority #${d.priority} · ${d.name}`} title="Mechanics" label="Sourced" style={{ boxShadow: `inset 3px 0 0 ${color}` }}>
+          <Rich as="p" text={`${d.mechanics.charAt(0).toUpperCase()}${d.mechanics.slice(1)}`} className="text-[0.9rem] leading-relaxed text-mid" />
+          <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {d.stages.map((s) => (
-              <div key={s.stage} className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2">
-                <span className="text-[0.75rem] font-semibold text-fg">Stage {s.stage}</span>
-                <Pill tone={affinityTone[s.affinity]}>{s.affinity}</Pill>
-                {s.note && <span className="text-[0.72rem] text-fg-subtle">{s.note}</span>}
+              <div key={s.stage} className="well flex items-start gap-3 px-3 py-2.5" style={{ boxShadow: `inset 3px 0 0 ${affinityColor[s.affinity]}` }}>
+                <div className="shrink-0">
+                  <div className="t-label text-low">Stage</div>
+                  <div className="t-num mt-1 text-[1.5rem] text-hi">{s.stage}</div>
+                </div>
+                <div className="min-w-0 pt-0.5">
+                  <span className="tag" style={{ '--c': affinityColor[s.affinity] } as CSSProperties}>
+                    <img src={affinityIcon[s.affinity]} alt="" className="h-2.5" />
+                    {s.affinity} boss
+                  </span>
+                  {s.note && <Rich as="div" text={s.note} className="mt-1.5 text-[0.76rem] leading-snug text-mid" />}
+                </div>
               </div>
             ))}
           </div>
           {isIG && (
-            <div className="mt-5">
-              <div className="eyebrow mb-2">Kill the minions before each threshold</div>
-              <div className="relative h-8 overflow-hidden rounded-lg border border-white/10 bg-gradient-to-r from-bad/50 via-warn/40 to-ok/50">
+            <div className="mt-6">
+              <div className="t-label mb-2 text-low">Kill the minions before each threshold</div>
+              <div className="relative h-9 overflow-hidden rounded-[3px] border border-edge-2 bg-raised-3">
+                <div className="absolute inset-y-0 left-0 bg-ig/25" style={{ width: '100%' }} />
                 {iceGolemThresholds.map((t) => (
-                  <div key={t} className="absolute inset-y-0 w-px bg-ink-950" style={{ left: `${t}%` }}>
-                    <span className="absolute top-1/2 left-1 -translate-y-1/2 text-[0.68rem] font-bold text-ink-950">{t}%</span>
+                  <div key={t} className="absolute inset-y-0 w-[2px] bg-ig" style={{ left: `${t}%` }}>
+                    <span className="absolute top-1/2 left-1.5 -translate-y-1/2 text-[0.7rem] font-extrabold text-hi tabular-nums">{t}%</span>
                   </div>
                 ))}
               </div>
-              <div className="mt-1 flex justify-between text-[0.65rem] text-fg-subtle">
+              <div className="mt-1 flex justify-between text-[0.66rem] text-low">
                 <span>0% HP</span>
                 <span>100% HP</span>
               </div>
             </div>
           )}
-        </Card>
+        </Panel>
         <StageTracker d={d} />
       </div>
 
-      <Card>
-        <SectionTitle
-          eyebrow="Team"
+      <section>
+        <SectionHead
+          index="01"
           title={d.hasWave1 ? `Wave ${wave} team` : 'Team (Wave 2)'}
           action={
             d.hasWave1 ? (
@@ -138,12 +154,12 @@ function DungeonView({ d }: { d: Dungeon }) {
                 ]}
               />
             ) : (
-              <Pill tone="neutral">Wave 2 only</Pill>
+              <Tag>Wave 2 only</Tag>
             )
           }
         />
         <AnimatePresence mode="wait">
-          <motion.div key={wave} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
+          <motion.div key={wave} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}>
             <TeamLineup
               slots={d.team.map((s) => {
                 const useW1 = wave === 1 && s.w1 !== undefined
@@ -159,56 +175,53 @@ function DungeonView({ d }: { d: Dungeon }) {
             />
           </motion.div>
         </AnimatePresence>
-        {d.hasWave1 && wave === 2 && <p className="mt-3 text-[0.72rem] text-fg-subtle">Highlighted slots are the Wave-2 upgrades.</p>}
-        <Rich as="p" text={d.after} className="mt-4 text-[0.84rem] leading-relaxed text-fg-muted" />
-      </Card>
+        {d.hasWave1 && wave === 2 && <p className="mt-3 text-[0.74rem] text-low">Slots with a top bar are the Wave-2 upgrades.</p>}
+        <Rich as="p" text={d.after} className="mt-4 max-w-4xl text-[0.88rem] leading-relaxed text-mid" />
+      </section>
     </div>
   )
 }
 
 function ArenaView() {
+  const color = dungeonColor.arena
   return (
-    <div className="space-y-5">
-      <Card>
-        <SectionTitle eyebrow="Priority #6" title="Arena" />
+    <div className="space-y-14">
+      <Panel kicker="Priority #6" title="Arena" style={{ boxShadow: `inset 3px 0 0 ${color}` }}>
         <ul className="space-y-3">
           {arena.bullets.map((b) => (
-            <li key={b} className="flex gap-2.5 text-[0.86rem] leading-relaxed text-fg-muted">
-              <span className="mt-2 size-1.5 shrink-0 rounded-full bg-gold-500" />
+            <li key={b} className="flex gap-2.5 text-[0.88rem] leading-relaxed text-mid">
+              <span className="mt-[0.6rem] size-1.5 shrink-0 bg-arena" />
               <Rich text={b} />
             </li>
           ))}
         </ul>
-      </Card>
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      </Panel>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {[
-          { title: 'Week-1 offense', label: 'My call', list: arena.week1 },
-          { title: 'Wave-2 offense', label: undefined, list: arena.wave2 },
+          { title: 'Week-1 offense', label: 'My call', list: arena.week1, index: '01' },
+          { title: 'Wave-2 offense', label: undefined, list: arena.wave2, index: '02' },
         ].map((t) => (
-          <Card key={t.title}>
-            <SectionTitle eyebrow="Offense" title={t.title} label={t.label} />
-            <div className="space-y-2">
+          <section key={t.title}>
+            <SectionHead index={t.index} title={t.title} label={t.label} />
+            <div className="space-y-1.5">
               {t.list.map((m, i) => (
-                <motion.div
-                  key={m.name}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5"
-                >
-                  <div className="flex -space-x-2">
+                <motion.div key={m.name} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} className="panel flex items-center gap-3 px-3 py-2.5">
+                  <span className="t-num w-6 shrink-0 text-[0.85rem] text-low">{i + 1}</span>
+                  <div className="flex gap-1">
                     {m.ids.map((id) => (
-                      <Sigil key={id} id={id} size={36} />
+                      <Link key={id} to={`/champions/${id}`} data-tip={`champ:${id}`}>
+                        <Portrait id={id} size={34} />
+                      </Link>
                     ))}
                   </div>
                   <div>
-                    <div className="text-[0.86rem] font-semibold text-fg">{m.name}</div>
-                    {m.note && <div className="text-[0.75rem] text-fg-subtle">{m.note}</div>}
+                    <Rich as="div" text={m.name} className="text-[0.9rem] font-bold text-hi" />
+                    {m.note && <Rich as="div" text={m.note} className="text-[0.76rem] text-low" />}
                   </div>
                 </motion.div>
               ))}
             </div>
-          </Card>
+          </section>
         ))}
       </div>
       <Callout tone="warn" text="**Watch out:** Polymorph and Stoneskin defenses counter both Mythicals." />
@@ -225,60 +238,65 @@ export function Dungeons() {
     <div>
       <PageHeader eyebrow="Section 4" title="Dungeons & Arena" intro={dungeonsIntro} />
 
-      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr]">
-        <Card padded={false} className="p-4">
-          <div className="eyebrow mb-3 flex items-center gap-2">
-            <Swords className="size-3.5" /> Farm order
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {farmOrder.map((f, i) => (
-              <div key={f.id} className="flex items-center gap-2">
-                {i > 0 && <ArrowRight className="size-4 text-gold-600" />}
+      <div className="mb-10 grid grid-cols-1 gap-6 lg:grid-cols-[1.3fr_1fr]">
+        <Panel kicker="Gear" title="Farm order">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {farmOrder.map((f, i) => {
+              const color = dungeonColor[f.id]
+              const active = tab === f.id
+              return (
                 <Link
+                  key={f.id}
                   to={`/dungeons/${f.id}`}
-                  className={cn(
-                    'inline-flex flex-col rounded-xl border px-3 py-1.5 transition hover:border-gold-400/40',
-                    tab === f.id ? 'border-gold-400/40 bg-gold-400/[0.08]' : 'border-white/[0.08] bg-white/[0.03]',
-                  )}
+                  className={cn('relative block rounded-[3px] border px-3 py-2.5 transition-colors', active ? 'border-edge-2 bg-raised-3' : 'border-edge hover:border-edge-2')}
+                  style={{ boxShadow: `inset 0 3px 0 ${color}` }}
                 >
-                  <span className="text-[0.82rem] font-semibold text-fg">
-                    {i + 1}. {f.name}
-                  </span>
-                  <span className="text-[0.68rem] text-fg-subtle">{f.reason}</span>
+                  <div className="flex items-center justify-between">
+                    <span className="t-num text-[1.3rem]" style={{ color }}>
+                      {i + 1}
+                    </span>
+                    {i < farmOrder.length - 1 && <ArrowRight className="size-3.5 text-low" />}
+                  </div>
+                  <div className="mt-1 text-[0.86rem] font-bold text-hi">{f.name}</div>
+                  <Rich as="div" text={f.reason} links={false} className="text-[0.72rem] text-low" />
                 </Link>
-              </div>
-            ))}
+              )
+            })}
           </div>
-        </Card>
-        <Card padded={false} className="p-4">
-          <div className="eyebrow mb-3 flex items-center gap-2">
-            <Mountain className="size-3.5" /> Early stat targets by role <LabelTag label="Sourced" />
-          </div>
+        </Panel>
+        <Panel
+          kicker="HellHades"
+          title={
+            <span className="inline-flex flex-wrap items-center gap-2">
+              Early stat targets by role <LabelTag label="Sourced" />
+            </span>
+          }
+        >
           <div className="grid grid-cols-3 gap-2">
             {statTargets.roles.map((r) => (
-              <div key={r.role} className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-2.5 py-2">
-                <div className="text-[0.72rem] font-semibold text-gold-300">{r.role}</div>
-                {r.stats.map((s) => (
-                  <div key={s} className="text-[0.75rem] text-fg-muted tabular-nums">
-                    {s}
-                  </div>
-                ))}
+              <div key={r.role} className="well px-3 py-2.5">
+                <div className="t-label mb-2 text-low">{r.role}</div>
+                <div className="flex flex-wrap gap-1">
+                  {r.stats.map((s) => (
+                    <Rich key={s} text={s} className="text-[0.8rem] font-semibold text-hi" />
+                  ))}
+                </div>
               </div>
             ))}
           </div>
-          <div className="mt-2 text-[0.7rem] text-fg-subtle">{statTargets.stage20}.</div>
-        </Card>
+          <div className="mt-3 text-[0.74rem] text-low">{statTargets.stage20}.</div>
+        </Panel>
       </div>
 
-      <TabBar items={tabs} active={tab} className="mb-6" />
+      <TabBar items={tabs} active={tab} className="mb-10" />
       <AnimatePresence mode="wait">
-        <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
+        <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
           {d ? <DungeonView d={d} /> : <ArenaView />}
         </motion.div>
       </AnimatePresence>
-      {d && <Callout tone="info" className="mt-5" text={hardModeNote} />}
-      <div className="mt-5">
-        <Rich as="p" text={statTargets.text} className="text-[0.72rem] leading-relaxed text-fg-subtle" />
+      {d && <Callout tone="info" className="mt-10" text={hardModeNote} />}
+      <div className="mt-6">
+        <Rich as="p" text={statTargets.text} className="max-w-5xl text-[0.74rem] leading-relaxed text-low" />
       </div>
     </div>
   )

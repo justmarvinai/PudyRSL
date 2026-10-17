@@ -1,8 +1,8 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowRight, Ban, CalendarRange, Crosshair, KeyRound, Shield, Skull, Sparkles, Swords } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { Navigate, useParams } from 'react-router'
-import { Sigil } from '../components/champion/Sigil'
+import { ArrowRight, KeyRound } from 'lucide-react'
+import { useEffect, useState, type CSSProperties } from 'react'
+import { Link, Navigate, useParams } from 'react-router'
+import { Portrait } from '../components/champion/Portrait'
 import { TeamLineup } from '../components/champion/TeamLineup'
 import { PageHeader } from '../components/layout/PageHeader'
 import { KeyPlanner } from '../components/tools/KeyPlanner'
@@ -10,7 +10,7 @@ import { TuneChecker } from '../components/tools/TuneChecker'
 import { Segmented } from '../components/ui/Fields'
 import { LabelTag, Rich } from '../components/ui/Rich'
 import { TabBar } from '../components/ui/Tabs'
-import { Callout, Card, Pill, SectionTitle } from '../components/ui/primitives'
+import { Callout, Panel, SectionHead, Tag } from '../components/ui/primitives'
 import {
   chimera,
   clanBossIntro,
@@ -28,15 +28,18 @@ import {
 import { weeklyKeys } from '../data/roadmap'
 import { cn } from '../lib/cn'
 import { dayNumber, formatCountdown, inRange, nextWeeklyReset, useNow } from '../lib/dates'
+import { DEMON_LORD_ART, difficultyColor, raidData, raidForCore } from '../lib/rsl'
 import { useStore, useWeeklyCounts } from '../lib/store'
 
 const tabs = [
-  { key: 'demon-lord', label: 'Demon Lord', icon: <Skull className="size-4" />, to: '/clan-boss/demon-lord' },
-  { key: 'hydra', label: 'Hydra', icon: <Swords className="size-4" />, to: '/clan-boss/hydra' },
-  { key: 'chimera', label: 'Chimera', icon: <Sparkles className="size-4" />, to: '/clan-boss/chimera' },
+  { key: 'demon-lord', label: 'Demon Lord', color: 'var(--color-cb)', to: '/clan-boss/demon-lord' },
+  { key: 'hydra', label: 'Hydra', color: 'var(--color-hydra)', to: '/clan-boss/hydra' },
+  { key: 'chimera', label: 'Chimera', color: 'var(--color-chimera)', to: '/clan-boss/chimera' },
 ]
 
-function WeeklyKeyTracker({ id }: { id: 'hydra' | 'chimera' }) {
+const diffShort = (d: DifficultyKey) => (d === 'unm' ? 'UNM' : d === 'nm' ? 'NM' : difficultyNames[d])
+
+function WeeklyKeyTracker({ id, color }: { id: 'hydra' | 'chimera'; color: string }) {
   const now = useNow()
   const counts = useWeeklyCounts(now)
   const setWeekly = useStore((s) => s.setWeekly)
@@ -45,25 +48,25 @@ function WeeklyKeyTracker({ id }: { id: 'hydra' | 'chimera' }) {
   const w = weeklyKeys.find((k) => k.id === id)!
   const used = counts[id] ?? 0
   return (
-    <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-gold-500/20 bg-gold-500/[0.05] px-4 py-3">
+    <div className="panel flex flex-wrap items-center gap-4 px-5 py-4" style={{ boxShadow: `inset 3px 0 0 ${color}` }}>
       <div>
-        <div className="text-[0.84rem] font-semibold text-fg">This week&apos;s {w.title.toLowerCase()}</div>
-        <div className="text-[0.72rem] text-fg-subtle">
+        <div className="t-label" style={{ color }}>
+          This week
+        </div>
+        <div className="mt-1 text-[0.95rem] font-bold text-hi">{w.title}</div>
+        <div className="text-[0.74rem] text-low tabular-nums">
           {used}/{w.total} used · resets in {formatCountdown(nextWeeklyReset(now, resetDay, resetHour).getTime() - now.getTime())}
         </div>
       </div>
-      <div className="ml-auto flex gap-2">
+      <div className="ml-auto flex gap-1.5">
         {Array.from({ length: w.total }).map((_, i) => (
           <motion.button
             key={i}
             type="button"
-            whileTap={{ scale: 0.85 }}
-            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.88 }}
             onClick={() => setWeekly(id, used === i + 1 ? i : i + 1)}
-            className={cn(
-              'grid size-10 place-items-center rounded-xl border transition-colors',
-              i < used ? 'border-gold-400/70 bg-gold-500/25 text-gold-200 shadow-[0_0_14px_-4px_rgb(246_196_99/0.8)]' : 'border-white/12 bg-white/[0.03] text-fg-subtle hover:border-gold-400/40',
-            )}
+            className={cn('grid size-11 place-items-center rounded-[4px] border transition-colors', i < used ? 'text-ink' : 'border-edge-2 text-low hover:border-mid hover:text-hi')}
+            style={i < used ? { background: color, borderColor: color } : undefined}
             aria-label={`Key ${i + 1}`}
           >
             <KeyRound className="size-4" />
@@ -84,93 +87,107 @@ function DemonLord() {
   const op = openers.find((o) => o.key === opener)!
 
   return (
-    <div className="space-y-5">
-      <Card>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <Rich as="p" text={clanBossIntro} className="max-w-3xl text-[0.88rem] leading-relaxed text-fg-muted" />
-          <div>
-            <div className="eyebrow mb-1.5">Highest difficulty you clear</div>
+    <div className="space-y-14">
+      <div className="panel grid grid-cols-1 overflow-hidden sm:grid-cols-[180px_1fr]">
+        <div className="relative hidden sm:block" style={{ boxShadow: 'inset -3px 0 0 var(--color-cb)' }}>
+          <img src={DEMON_LORD_ART} alt="Demon Lord" className="absolute inset-0 h-full w-full object-cover" />
+        </div>
+        <div className="p-5 sm:p-6">
+          <div className="t-label text-cb">Demon Lord · daily</div>
+          <Rich as="p" text={clanBossIntro} className="mt-2 max-w-3xl text-[0.92rem] leading-relaxed text-mid" />
+          <div className="mt-5">
+            <div className="t-label mb-2 text-low">Highest difficulty you clear</div>
             <Segmented
               size="sm"
               value={cbDifficulty ?? ('' as DifficultyKey)}
               onChange={(d) => setCbDifficulty(d === cbDifficulty ? null : d)}
-              options={difficultyOrder.map((d) => ({ value: d, label: d === 'unm' ? 'UNM' : d === 'nm' ? 'NM' : difficultyNames[d] }))}
+              options={difficultyOrder.map((d) => ({ value: d, label: diffShort(d), color: difficultyColor[d] }))}
             />
           </div>
         </div>
-      </Card>
-
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-5">
-        <Card className="xl:col-span-2">
-          <SectionTitle eyebrow="Demon Lord" title="Rules that shape everything" label={demonLordRules.label} />
-          <div className="mb-4 flex flex-wrap gap-1.5">
-            {demonLordRules.immunities.map((im) => (
-              <Pill key={im} tone="bad" icon={<Ban className="size-3" />}>
-                {im}
-              </Pill>
-            ))}
-          </div>
-          <ul className="space-y-2.5">
-            {demonLordRules.items.map((t) => (
-              <li key={t} className="flex gap-2.5 text-[0.84rem] leading-relaxed text-fg-muted">
-                <Shield className="mt-1 size-3.5 shrink-0 text-gold-500" />
-                <Rich text={t} />
-              </li>
-            ))}
-          </ul>
-        </Card>
-
-        <Card id="difficulty" className="scroll-mt-24 xl:col-span-3" padded={false}>
-          <div className="p-5 pb-2">
-            <SectionTitle eyebrow="Requirements" title="Speed & accuracy by difficulty" className="mb-0" />
-          </div>
-          <div className="overflow-x-auto">
-            <table className="table-guide">
-              <thead>
-                <tr>
-                  <th className="pl-5">Difficulty</th>
-                  <th>Speed</th>
-                  <th>Accuracy (DWJ)</th>
-                  <th>Accuracy (Ayumilove)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {difficultyRequirements.rows.map((r) => (
-                  <tr key={r.key} className={cn(cbDifficulty === r.key && 'bg-gold-400/[0.06]')}>
-                    <td className="pl-5 font-semibold text-fg">
-                      {difficultyNames[r.key]}
-                      {cbDifficulty === r.key && <Pill tone="gold" className="ml-2">You</Pill>}
-                    </td>
-                    <td className="tabular-nums">{r.speed}</td>
-                    <td className="tabular-nums">{r.accDwj}</td>
-                    <td className="tabular-nums">{r.accAyu}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <Rich as="p" text={difficultyRequirements.sources} className="px-5 pt-2 pb-4 text-[0.72rem] text-fg-subtle" />
-        </Card>
       </div>
 
-      <Card id="starter-team" className="scroll-mt-24">
-        <SectionTitle eyebrow="Day 1 to about week 3" title={starterTeam.title} label={starterTeam.label} />
+      <section>
+        <SectionHead index="01" title="Rules that shape everything" label={demonLordRules.label} />
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">
+          <Panel className="xl:col-span-2" kicker="Demon Lord" title="Immune to">
+            <div className="mb-5 flex flex-wrap gap-1.5">
+              {demonLordRules.immunities.map((im) => {
+                const icon = raidData.icons[im]?.src
+                return (
+                  <span key={im} className="tag h-7 px-2 text-[0.7rem]" style={{ '--c': 'var(--color-debuff)' } as CSSProperties}>
+                    {icon && <img src={icon} alt="" className="size-4 opacity-90 grayscale-[0.2]" />}
+                    <span className="line-through decoration-1">{im}</span>
+                  </span>
+                )
+              })}
+            </div>
+            <ul className="space-y-3">
+              {demonLordRules.items.map((t) => (
+                <li key={t} className="flex gap-2.5 text-[0.86rem] leading-relaxed text-mid">
+                  <span className="mt-[0.6rem] size-1.5 shrink-0 bg-cb" />
+                  <Rich text={t} />
+                </li>
+              ))}
+            </ul>
+          </Panel>
+
+          <Panel id="difficulty" className="scroll-mt-24 xl:col-span-3" kicker="Requirements" title="Speed & accuracy by difficulty" padded={false}>
+            <div className="overflow-x-auto">
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th className="pl-5">Difficulty</th>
+                    <th>Speed</th>
+                    <th>Accuracy (DWJ)</th>
+                    <th>Accuracy (Ayumilove)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {difficultyRequirements.rows.map((r) => {
+                    const mine = cbDifficulty === r.key
+                    return (
+                      <tr key={r.key} style={mine ? { boxShadow: `inset 3px 0 0 ${difficultyColor[r.key]}` } : undefined}>
+                        <td className="pl-5">
+                          <span className="inline-flex items-center gap-2 font-bold" style={{ color: difficultyColor[r.key] }}>
+                            <span className="dot" style={{ '--c': difficultyColor[r.key] } as CSSProperties} />
+                            {difficultyNames[r.key]}
+                          </span>
+                          {mine && (
+                            <Tag color={difficultyColor[r.key]} solid className="ml-2">
+                              You
+                            </Tag>
+                          )}
+                        </td>
+                        <td className="font-bold text-hi tabular-nums">{r.speed}</td>
+                        <td className="font-bold text-hi tabular-nums">{r.accDwj}</td>
+                        <td className="tabular-nums">{r.accAyu}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <Rich as="p" text={difficultyRequirements.sources} className="border-t border-edge px-5 py-3 text-[0.74rem] text-low" />
+          </Panel>
+        </div>
+      </section>
+
+      <section id="starter-team" className="scroll-mt-24">
+        <SectionHead index="02" title={starterTeam.title} label={starterTeam.label} />
         <TeamLineup
           slots={starterTeam.slots.map((s) => ({
             slot: s.slot,
             text: s.champ,
             ids: s.ids,
-            lines: [
-              { text: s.role },
-              { label: 'Note', text: s.notes },
-            ],
+            lines: [{ text: s.role }, { label: 'Note', text: s.notes }],
           }))}
         />
-        <Rich as="p" text={starterTeam.after} className="mt-4 text-[0.82rem] leading-relaxed text-fg-muted" />
-      </Card>
+        <Rich as="p" text={starterTeam.after} className="mt-4 max-w-4xl text-[0.86rem] leading-relaxed text-mid" />
+      </section>
 
-      <Card id="uk-team" className="scroll-mt-24">
-        <SectionTitle eyebrow="Weeks 2–6" title={ukTeam.title} label={ukTeam.label} />
+      <section id="uk-team" className="scroll-mt-24">
+        <SectionHead index="03" title={ukTeam.title} label={ukTeam.label} />
         <TeamLineup
           slots={ukTeam.slots.map((s) => ({
             slot: `${s.slot} · ${s.speed}`,
@@ -184,153 +201,190 @@ function DemonLord() {
             ],
           }))}
         />
-        <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <div>
-            <Rich as="p" text={ukTeam.rulesIntro} className="mb-2 text-[0.8rem] font-semibold text-fg" />
-            <ul className="space-y-2">
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <Panel kicker="DeadwoodJedi" title="Tune rules">
+            <Rich as="p" text={ukTeam.rulesIntro} className="mb-3 text-[0.82rem] text-low" />
+            <ul className="space-y-2.5">
               {ukTeam.rules.map((r) => (
-                <li key={r} className="flex gap-2.5 text-[0.82rem] leading-relaxed text-fg-muted">
-                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-gold-500" />
+                <li key={r} className="flex gap-2.5 text-[0.86rem] leading-relaxed text-mid">
+                  <span className="mt-[0.6rem] size-1.5 shrink-0 bg-paper" />
                   <Rich text={r} />
                 </li>
               ))}
             </ul>
-          </div>
-          <div id="openers" className="scroll-mt-24">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[0.86rem] font-semibold text-fg">Openers</span>
-              <Segmented size="sm" value={opener} onChange={setOpener} options={openers.map((o) => ({ value: o.key, label: o.key === 'brutal' ? 'Brutal' : o.key.toUpperCase() }))} />
-            </div>
+          </Panel>
+          <Panel
+            id="openers"
+            className="scroll-mt-24"
+            kicker="Turn order"
+            title="Openers"
+            action={
+              <Segmented
+                size="sm"
+                value={opener}
+                onChange={setOpener}
+                options={openers.map((o) => ({ value: o.key, label: o.key === 'brutal' ? 'Brutal' : o.key.toUpperCase(), color: difficultyColor[o.key] }))}
+              />
+            }
+          >
             <AnimatePresence mode="wait">
-              <motion.div key={opener} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className="space-y-2">
-                {op.lines.map((l) => (
-                  <div key={l.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
-                    <Sigil id={l.id} size={32} />
-                    <span className="w-24 text-[0.82rem] font-semibold text-fg">{l.champ}</span>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {l.seq.map((a, i) => (
-                        <span key={i} className="flex items-center gap-1.5">
-                          {i > 0 && <ArrowRight className="size-3.5 text-fg-subtle" />}
-                          <motion.span
-                            initial={{ scale: 0.6, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ delay: 0.06 * i }}
-                            className="rounded-lg border border-gold-400/40 bg-gold-400/10 px-2 py-0.5 text-xs font-bold text-gold-300"
-                          >
-                            {a}
-                          </motion.span>
-                        </span>
-                      ))}
+              <motion.div key={opener} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.18 }} className="space-y-1.5">
+                {op.lines.map((l) => {
+                  const hasSkills = !!raidForCore(l.id)?.skills
+                  return (
+                    <div key={l.id} className="well flex flex-wrap items-center gap-3 px-3 py-2.5">
+                      <Link to={`/champions/${l.id}`} data-tip={`champ:${l.id}`}>
+                        <Portrait id={l.id} size={30} showAffinity={false} />
+                      </Link>
+                      <span className="w-24 text-[0.86rem] font-bold text-hi">{l.champ}</span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {l.seq.map((a, i) => (
+                          <span key={i} className="flex items-center gap-1.5">
+                            {i > 0 && <ArrowRight className="size-3.5 text-low" />}
+                            <motion.span
+                              initial={{ opacity: 0, y: -4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.05 * i }}
+                              className="term-skill text-[0.8rem]"
+                              data-tip={hasSkills ? `skill:${l.id}:${a}` : undefined}
+                            >
+                              {a}
+                            </motion.span>
+                          </span>
+                        ))}
+                      </div>
+                      {l.note && <span className="text-[0.74rem] text-low">{l.note}</span>}
                     </div>
-                    {l.note && <span className="text-[0.72rem] text-fg-subtle">{l.note}</span>}
-                  </div>
-                ))}
-                {op.after && <div className="pl-1 text-[0.75rem] text-fg-subtle">…{op.after}.</div>}
+                  )
+                })}
+                {op.after && <div className="pl-1 text-[0.76rem] text-low">…{op.after}.</div>}
               </motion.div>
             </AnimatePresence>
-            <Rich as="p" text={ukTeam.openersText} className="mt-3 text-[0.72rem] leading-relaxed text-fg-subtle" />
-          </div>
+            <Rich as="p" text={ukTeam.openersText} className="mt-4 text-[0.74rem] leading-relaxed text-low" />
+          </Panel>
         </div>
-        <Callout tone="warn" className="mt-5" text={ukTeam.caveat} />
-      </Card>
+        <Callout tone="warn" className="mt-6" text={ukTeam.caveat} />
+      </section>
 
-      <TuneChecker />
+      <section>
+        <SectionHead index="04" title="Check your tune" />
+        <TuneChecker />
+      </section>
 
-      <Card>
-        <SectionTitle eyebrow="When to push" title="Difficulty timeline" label={difficultyTimeline.label} />
+      <section>
+        <SectionHead index="05" title="Difficulty timeline" label={difficultyTimeline.label} />
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {difficultyTimeline.rows.map((r, i) => {
-            const now = inRange(day, r.days)
+            const isNow = inRange(day, r.days)
             return (
               <motion.div
                 key={r.when}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.06 }}
-                className={cn('relative rounded-2xl border p-4', now ? 'border-gold-400/35 bg-gold-400/[0.06]' : 'border-white/[0.07] bg-white/[0.02]')}
+                transition={{ delay: i * 0.05 }}
+                className={cn('panel p-5', isNow && 'border-edge-2 bg-raised-2')}
+                style={isNow ? { boxShadow: 'inset 0 3px 0 var(--color-paper)' } : undefined}
               >
                 <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5 text-[0.78rem] font-semibold text-fg-muted">
-                    <CalendarRange className="size-3.5 text-gold-500" /> {r.when}
-                  </span>
-                  {now && <Pill tone="gold">Now</Pill>}
+                  <span className="t-label text-low">{r.when}</span>
+                  {isNow && (
+                    <Tag color="var(--color-paper)" solid>
+                      Now
+                    </Tag>
+                  )}
                 </div>
-                <div className="mt-2 text-lg font-bold text-fg">{r.difficulty}</div>
-                <div className="text-[0.8rem] text-gold-300/90">{r.team}</div>
-                <Rich as="p" text={r.why} className="mt-2 text-[0.78rem] leading-relaxed text-fg-subtle" />
+                <Rich as="div" text={r.difficulty} className="t-headline mt-3 text-[1.3rem] text-hi" />
+                <Rich as="div" text={r.team} className="mt-1 text-[0.84rem] font-semibold text-mid" />
+                <Rich as="p" text={r.why} className="mt-3 text-[0.8rem] leading-relaxed text-low" />
               </motion.div>
             )
           })}
         </div>
-      </Card>
+      </section>
 
-      <KeyPlanner />
+      <section>
+        <SectionHead index="06" title="Plan your keys" />
+        <KeyPlanner />
+      </section>
+    </div>
+  )
+}
+
+function Facts({ facts, label, color }: { facts: string[]; label: string; color: string }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {facts.map((f) => (
+        <Tag key={f} color={color}>
+          {f}
+        </Tag>
+      ))}
+      <LabelTag label={label} />
     </div>
   )
 }
 
 function Hydra() {
+  const color = 'var(--color-hydra)'
   return (
-    <div className="space-y-5">
-      <Card>
-        <div className="flex flex-wrap items-center gap-2">
-          {hydra.facts.map((f) => (
-            <Pill key={f} tone="gold">
-              {f}
-            </Pill>
-          ))}
-          <LabelTag label={hydra.label} />
-        </div>
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="space-y-14">
+      <section>
+        <Facts facts={hydra.facts} label={hydra.label} color={color} />
+        <SectionHead index="01" title="Heads & counters" className="mt-8" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {hydra.heads.map((h, i) => {
             const weak = h.names.includes('Torment')
             return (
               <motion.div
                 key={h.names.join()}
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.06 }}
-                whileHover={{ y: -3 }}
-                className={cn('relative overflow-hidden rounded-2xl border p-4', weak ? 'border-bad/30 bg-bad/[0.05]' : 'border-white/[0.07] bg-white/[0.025]')}
+                transition={{ delay: i * 0.05 }}
+                className="panel p-5"
+                style={{ boxShadow: `inset 0 3px 0 ${weak ? 'var(--color-bad)' : color}` }}
               >
-                <div className="absolute -top-6 -right-6 size-20 rounded-full bg-gold-500/10 blur-2xl" />
-                <div className="eyebrow">{h.names.length > 1 ? 'Heads' : 'Head'}</div>
-                <div className="mt-1 font-display text-lg font-bold text-fg">{h.names.join(' / ')}</div>
-                <div className="mt-3 flex items-start gap-2 text-[0.82rem] text-fg-muted">
-                  <Crosshair className="mt-0.5 size-3.5 shrink-0 text-gold-400" />
-                  <span>{h.counter}</span>
+                <div className="t-label text-low">{h.names.length > 1 ? 'Heads' : 'Head'}</div>
+                <div className="t-headline mt-2 text-[1.35rem] text-hi">{h.names.join(' / ')}</div>
+                <div className="mt-4 border-t border-edge pt-3">
+                  <div className="t-label mb-1 text-low">Counter</div>
+                  <Rich as="div" text={h.counter} className="text-[0.86rem] leading-snug text-mid" />
                 </div>
-                {weak && <Pill tone="bad" className="mt-3">Your weak head</Pill>}
+                {weak && (
+                  <Tag color="var(--color-bad)" className="mt-4">
+                    Your weak head
+                  </Tag>
+                )}
               </motion.div>
             )
           })}
         </div>
-        <Rich as="p" text={hydra.countersText} className="mt-4 text-[0.75rem] leading-relaxed text-fg-subtle" />
-      </Card>
+        <Rich as="p" text={hydra.countersText} className="mt-4 max-w-5xl text-[0.78rem] leading-relaxed text-low" />
+      </section>
 
-      <WeeklyKeyTracker id="hydra" />
+      <WeeklyKeyTracker id="hydra" color={color} />
 
-      <Card padded={false}>
-        <div className="p-5 pb-2">
-          <SectionTitle eyebrow="Teams" title="Hydra keys" className="mb-0" />
-        </div>
-        <div className="divide-y divide-white/[0.05]">
+      <section>
+        <SectionHead index="02" title="Hydra keys" />
+        <div className="panel divide-y divide-edge">
           {hydra.keys.map((k) => (
-            <div key={k.key} className="grid grid-cols-1 gap-4 px-5 py-4 lg:grid-cols-[120px_1fr_1.2fr]">
-              <div className="font-display text-lg font-bold text-gold-300">{k.key}</div>
+            <div key={k.key} className="grid grid-cols-1 gap-4 px-5 py-5 lg:grid-cols-[150px_1fr_1.1fr]">
+              <div className="t-headline text-[1.4rem]" style={{ color }}>
+                {k.key}
+              </div>
               <div>
-                <div className="mb-2 flex flex-wrap -space-x-2">
+                <div className="mb-3 flex flex-wrap gap-1">
                   {k.ids.map((id) => (
-                    <Sigil key={id} id={id} size={38} />
+                    <Link key={id} to={`/champions/${id}`} data-tip={`champ:${id}`} className="transition-transform hover:-translate-y-0.5">
+                      <Portrait id={id} size={40} />
+                    </Link>
                   ))}
                 </div>
-                <div className="text-[0.82rem] text-fg">{k.team}</div>
+                <Rich as="div" text={k.team} className="text-[0.86rem] font-semibold text-hi" />
               </div>
-              <div className="text-[0.82rem] leading-relaxed text-fg-muted">{k.roles}</div>
+              <Rich as="div" text={k.roles} className="text-[0.86rem] leading-relaxed text-mid" />
             </div>
           ))}
         </div>
-      </Card>
+      </section>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         {hydra.notes.map((n, i) => (
@@ -341,14 +395,15 @@ function Hydra() {
   )
 }
 
-const formStyle: Record<string, { ring: string; soft: string; text: string; glow: string }> = {
-  Ultimate: { ring: 'border-gold-400/60', soft: 'border-gold-400/25', text: 'text-gold-300', glow: 'rgb(246 196 99 / 0.55)' },
-  Ram: { ring: 'border-info/60', soft: 'border-info/25', text: 'text-info', glow: 'rgb(106 168 255 / 0.55)' },
-  Lion: { ring: 'border-ember-400/60', soft: 'border-ember-400/25', text: 'text-ember-400', glow: 'rgb(255 122 107 / 0.55)' },
-  Viper: { ring: 'border-spirit/60', soft: 'border-spirit/25', text: 'text-spirit', glow: 'rgb(79 224 143 / 0.55)' },
+const formColor: Record<string, string> = {
+  Ultimate: 'var(--color-chimera)',
+  Ram: 'var(--color-rare)',
+  Lion: 'var(--color-legendary)',
+  Viper: 'var(--color-spirit)',
 }
 
 function Chimera() {
+  const color = 'var(--color-chimera)'
   const [active, setActive] = useState(0)
   const [paused, setPaused] = useState(false)
   useEffect(() => {
@@ -360,32 +415,25 @@ function Chimera() {
   const desc = chimera.forms.find((f) => f.form === form)!
 
   return (
-    <div className="space-y-5">
-      <Card>
-        <div className="flex flex-wrap items-center gap-2">
-          {chimera.facts.map((f) => (
-            <Pill key={f} tone="gold">
-              {f}
-            </Pill>
-          ))}
-          <LabelTag label={chimera.label} />
-        </div>
-
-        <div className="mt-6" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
-          <div className="eyebrow mb-3">Forms cycle every 5 turns</div>
+    <div className="space-y-14">
+      <section>
+        <Facts facts={chimera.facts} label={chimera.label} color={color} />
+        <SectionHead index="01" title="Forms cycle every 5 turns" className="mt-8" />
+        <Panel onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
           <div className="flex flex-wrap items-center gap-2">
             {chimera.cycle.map((f, i) => {
-              const st = formStyle[f]
               const on = i === active
+              const c = formColor[f]
               return (
                 <div key={i} className="flex items-center gap-2">
-                  {i > 0 && <ArrowRight className={cn('size-4 transition-colors', i <= active ? 'text-gold-500' : 'text-fg-subtle/40')} />}
+                  {i > 0 && <ArrowRight className={cn('size-4 transition-colors', i <= active ? 'text-mid' : 'text-edge-2')} />}
                   <motion.button
                     type="button"
                     onClick={() => setActive(i)}
-                    animate={on ? { scale: 1.08, boxShadow: `0 0 24px -4px ${st.glow}` } : { scale: 1, boxShadow: '0 0 0 0 rgba(0,0,0,0)' }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                    className={cn('rounded-xl border-2 px-3.5 py-2 text-sm font-bold transition-colors', on ? `${st.ring} ${st.text} bg-white/[0.05]` : 'border-white/10 text-fg-subtle')}
+                    animate={{ scale: on ? 1.06 : 1 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 26 }}
+                    className={cn('rounded-[3px] border-2 px-3.5 py-2 text-[0.82rem] font-extrabold uppercase transition-colors [font-stretch:110%]', on ? 'text-ink' : 'text-low')}
+                    style={on ? { background: c, borderColor: c } : { borderColor: 'var(--color-edge-2)' }}
                   >
                     {f}
                   </motion.button>
@@ -398,32 +446,39 @@ function Chimera() {
               key={form}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              className="mt-4 rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3 text-[0.86rem] text-fg-muted"
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.18 }}
+              className="well mt-4 px-4 py-3 text-[0.9rem] text-mid"
+              style={{ boxShadow: `inset 3px 0 0 ${formColor[form]}` }}
             >
-              <span className={cn('font-bold', formStyle[form].text)}>{form}</span> {desc.text}.
+              <span className="font-extrabold" style={{ color: formColor[form] }}>
+                {form}
+              </span>{' '}
+              <Rich text={desc.text} />.
             </motion.div>
           </AnimatePresence>
-        </div>
+        </Panel>
 
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {chimera.forms.map((f) => (
-            <div key={f.form} className={cn('rounded-2xl border bg-white/[0.02] p-4', formStyle[f.form].soft)}>
-              <div className={cn('font-display text-lg font-bold', formStyle[f.form].text)}>{f.form}</div>
-              <div className="mt-1 text-[0.8rem] leading-relaxed text-fg-muted">{f.text}</div>
+            <div key={f.form} className="panel p-5" style={{ boxShadow: `inset 0 3px 0 ${formColor[f.form]}` }}>
+              <div className="t-headline text-[1.3rem]" style={{ color: formColor[f.form] }}>
+                {f.form}
+              </div>
+              <Rich as="div" text={f.text} className="mt-2 text-[0.84rem] leading-relaxed text-mid" />
             </div>
           ))}
         </div>
-        <Rich as="p" text={`Sources: ${chimera.sources}`} className="mt-4 text-[0.72rem] text-fg-subtle" />
-      </Card>
+        <Rich as="p" text={`Sources: ${chimera.sources}`} className="mt-4 text-[0.74rem] text-low" />
+      </section>
 
-      <WeeklyKeyTracker id="chimera" />
+      <WeeklyKeyTracker id="chimera" color={color} />
 
-      <Card>
-        <SectionTitle eyebrow="Team" title="Chimera team" />
+      <section>
+        <SectionHead index="02" title="Chimera team" />
         <TeamLineup slots={chimera.team.map((s) => ({ slot: `Slot ${s.slot}`, text: s.champ, ids: s.ids, lines: [{ text: s.why }] }))} />
-        <Rich as="p" text={chimera.after} className="mt-4 text-[0.82rem] leading-relaxed text-fg-muted" />
-      </Card>
+        <Rich as="p" text={chimera.after} className="mt-4 max-w-4xl text-[0.86rem] leading-relaxed text-mid" />
+      </section>
     </div>
   )
 }
@@ -435,9 +490,9 @@ export function ClanBoss() {
   return (
     <div>
       <PageHeader eyebrow="Section 3 · Priority #1" title="Clan Boss" intro="Clan Boss is your #1 priority: Demon Lord, Hydra and Chimera." />
-      <TabBar items={tabs} active={tab} className="mb-6" />
+      <TabBar items={tabs} active={tab} className="mb-10" />
       <AnimatePresence mode="wait">
-        <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
+        <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
           {tab === 'demon-lord' && <DemonLord />}
           {tab === 'hydra' && <Hydra />}
           {tab === 'chimera' && <Chimera />}

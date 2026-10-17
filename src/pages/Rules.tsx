@@ -1,66 +1,38 @@
 import { AnimatePresence, motion } from 'motion/react'
-import {
-  ArrowUpRight,
-  BookOpen,
-  Bug,
-  Coins,
-  FlaskConical,
-  Gem,
-  KeyRound,
-  NotebookPen,
-  ShieldX,
-  Skull,
-  Snowflake,
-  Star,
-  Users,
-  type LucideIcon,
-} from 'lucide-react'
+import { ArrowUpRight, NotebookPen } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { PageHeader } from '../components/layout/PageHeader'
 import { Check } from '../components/ui/Check'
-import { ProgressRing } from '../components/ui/Progress'
+import { Segments } from '../components/ui/Progress'
 import { Rich } from '../components/ui/Rich'
-import { Card, SectionTitle } from '../components/ui/primitives'
+import { SectionHead } from '../components/ui/primitives'
 import { dontRules, openQuestions } from '../data/rules'
 import { cn } from '../lib/cn'
-import { pct } from '../lib/format'
 import { useStore } from '../lib/store'
 
-const ruleIcon: Record<string, LucideIcon> = {
-  brews: FlaskConical,
-  tune: Skull,
-  keys: KeyRound,
-  tomes: BookOpen,
-  feasts: Star,
-  legendaries: Users,
-  spider: Bug,
-  ig: Snowflake,
-  gems: Gem,
-  plus16: Coins,
-  sacrifice: ShieldX,
-}
-
-function QuestionRow({ id, text, to }: { id: string; text: string; to?: string }) {
+function QuestionRow({ id, index, text, to }: { id: string; index: number; text: string; to?: string }) {
   const q = useStore((s) => s.questions[id])
   const setQuestion = useStore((s) => s.setQuestion)
   const [open, setOpen] = useState(!!q?.note)
+  const verified = !!q?.verified
   return (
-    <motion.div layout className={cn('rounded-xl border p-4 transition-colors', q?.verified ? 'border-ok/25 bg-ok/[0.03]' : 'border-white/[0.07] bg-white/[0.02]')}>
+    <motion.div
+      layout
+      className={cn('rounded-[3px] border px-4 py-3.5 transition-colors', verified ? 'border-edge' : 'border-edge bg-raised-2')}
+      style={verified ? { boxShadow: 'inset 3px 0 0 var(--color-ok)' } : undefined}
+    >
       <div className="flex items-start gap-3">
-        <Check checked={!!q?.verified} onChange={(v) => setQuestion(id, { verified: v })} label="Checked in-game" />
+        <span className={cn('t-num w-6 shrink-0 pt-0.5 text-[0.85rem]', verified ? 'text-ok' : 'text-low')}>{String(index + 1).padStart(2, '0')}</span>
+        <Check checked={verified} onChange={(v) => setQuestion(id, { verified: v })} label="Checked in-game" />
         <div className="min-w-0 flex-1">
-          <Rich as="div" text={text} className={cn('text-[0.86rem] leading-relaxed', q?.verified ? 'text-fg-subtle' : 'text-fg-muted')} />
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setOpen((o) => !o)}
-              className="inline-flex items-center gap-1.5 text-[0.75rem] font-semibold text-fg-subtle transition hover:text-fg"
-            >
+          <Rich as="div" text={text} className={cn('text-[0.88rem] leading-relaxed', verified ? 'text-low' : 'text-mid')} />
+          <div className="mt-2 flex flex-wrap items-center gap-4">
+            <button type="button" onClick={() => setOpen((o) => !o)} className="t-label inline-flex items-center gap-1.5 text-low transition-colors hover:text-hi">
               <NotebookPen className="size-3.5" /> {q?.note ? 'Your finding' : 'Add what you found'}
             </button>
             {to && (
-              <Link to={to} className="inline-flex items-center gap-1 text-[0.75rem] font-semibold text-gold-400 hover:text-gold-300">
+              <Link to={to} className="t-label inline-flex items-center gap-1 text-mid transition-colors hover:text-hi">
                 Related <ArrowUpRight className="size-3.5" />
               </Link>
             )}
@@ -72,7 +44,7 @@ function QuestionRow({ id, text, to }: { id: string; text: string; to?: string }
                   defaultValue={q?.note ?? ''}
                   onBlur={(e) => setQuestion(id, { note: e.target.value })}
                   placeholder="What did you see in-game?"
-                  className="input mt-2 min-h-20 resize-y text-[0.82rem]"
+                  className="input mt-2 min-h-20 resize-y text-[0.84rem]"
                 />
               </motion.div>
             )}
@@ -87,65 +59,54 @@ export function Rules() {
   const questions = useStore((s) => s.questions)
   const verified = openQuestions.filter((q) => questions[q.id]?.verified).length
   return (
-    <div className="space-y-8">
+    <div className="space-y-16">
       <PageHeader eyebrow="Sections 7 & 8" title="Rules & checks" intro="The guide's hard don'ts, and the open questions to check in-game before you rely on a number." />
 
       <section id="donts" className="scroll-mt-24">
-        <SectionTitle eyebrow="Section 7" title="What not to do" />
+        <SectionHead index="07" title="What not to do" />
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {dontRules.map((r, i) => {
-            const Icon = ruleIcon[r.id] ?? ShieldX
-            return (
-              <motion.div
-                key={r.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
-                whileHover={{ y: -3 }}
+          {dontRules.map((r, i) => (
+            <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.025 }}>
+              <Link
+                to={r.to}
+                className="panel group flex h-full flex-col gap-3 p-5 transition-colors hover:border-edge-2 hover:bg-raised-2"
+                style={{ boxShadow: 'inset 0 3px 0 var(--color-bad)' }}
               >
-                <Link to={r.to} className="group card spotlight flex h-full flex-col gap-3 p-4" onMouseMove={(e) => {
-                  const el = e.currentTarget
-                  const rect = el.getBoundingClientRect()
-                  el.style.setProperty('--mx', `${e.clientX - rect.left}px`)
-                  el.style.setProperty('--my', `${e.clientY - rect.top}px`)
-                }}>
-                  <div className="flex items-center gap-2.5">
-                    <span className="grid size-8 place-items-center rounded-lg bg-bad/10 text-bad ring-1 ring-bad/25">
-                      <Icon className="size-4" />
-                    </span>
-                    <span className="text-[0.7rem] font-bold tracking-wider text-bad/90 uppercase">{r.topic}</span>
-                  </div>
-                  <p className="text-[0.86rem] leading-relaxed text-fg">{r.text}</p>
-                  <span className="mt-auto inline-flex items-center gap-1 text-[0.72rem] font-semibold text-fg-subtle transition group-hover:text-gold-300">
-                    Go to {r.topic} <ArrowUpRight className="size-3.5" />
-                  </span>
-                </Link>
-              </motion.div>
-            )
-          })}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="t-label text-bad">{r.topic}</span>
+                  <span className="t-num text-[0.85rem] text-edge-2">{String(i + 1).padStart(2, '0')}</span>
+                </div>
+                <Rich as="p" text={r.text} links={false} className="text-[0.9rem] leading-relaxed text-hi" />
+                <span className="t-label mt-auto inline-flex items-center gap-1 pt-1 text-low transition-colors group-hover:text-hi">
+                  Go to {r.topic} <ArrowUpRight className="size-3.5" />
+                </span>
+              </Link>
+            </motion.div>
+          ))}
         </div>
       </section>
 
       <section id="open-questions" className="scroll-mt-24">
-        <Card>
-          <SectionTitle
-            eyebrow="Section 8"
-            title="Open questions to check in-game"
-            action={
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-fg-muted">
-                  <span className="font-semibold text-fg tabular-nums">{verified}</span>/{openQuestions.length} checked
+        <SectionHead
+          index="08"
+          title="Open questions to check in-game"
+          action={
+            <div className="w-52">
+              <div className="mb-1.5 flex items-baseline justify-between text-[0.78rem] text-low">
+                <span className="t-label">Checked</span>
+                <span>
+                  <span className="font-bold text-hi tabular-nums">{verified}</span>/{openQuestions.length}
                 </span>
-                <ProgressRing value={pct(verified, openQuestions.length)} size={40} stroke={4} tone="ok" />
               </div>
-            }
-          />
-          <div className="space-y-2.5">
-            {openQuestions.map((q) => (
-              <QuestionRow key={q.id} id={q.id} text={q.text} to={q.to} />
-            ))}
-          </div>
-        </Card>
+              <Segments value={verified} total={openQuestions.length} color="var(--color-ok)" height={6} />
+            </div>
+          }
+        />
+        <div className="space-y-1.5">
+          {openQuestions.map((q, i) => (
+            <QuestionRow key={q.id} id={q.id} index={i} text={q.text} to={q.to} />
+          ))}
+        </div>
       </section>
     </div>
   )

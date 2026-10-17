@@ -39,6 +39,16 @@ test('robots.txt stays public', async () => {
   assert.equal(res.headers.get('x-middleware-next'), '1')
 })
 
+test('the lock screen font stays public, nothing else under it', async () => {
+  process.env.PUDY_PASSWORD = 'correct horse'
+  const font = await middleware(new Request(`${BASE}/fonts/mona-sans-latin-wdth.woff2`))
+  assert.equal(font.headers.get('x-middleware-next'), '1')
+  const sneaky = await middleware(new Request(`${BASE}/fonts/../assets/index-abc.js`))
+  assert.equal(sneaky.status, 401)
+  const page = await middleware(new Request(`${BASE}/`))
+  assert.match(await page.text(), /\/fonts\/mona-sans-latin-wdth\.woff2/)
+})
+
 test('wrong password shows the error again', async () => {
   process.env.PUDY_PASSWORD = 'correct horse'
   const res = await middleware(form({ password: 'nope', next: '/roadmap' }))

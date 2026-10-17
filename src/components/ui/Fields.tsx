@@ -1,6 +1,6 @@
 import { LayoutGroup, motion } from 'motion/react'
 import { ChevronDown, Minus, Plus } from 'lucide-react'
-import { useEffect, useId, useState, type ReactNode } from 'react'
+import { useEffect, useId, useState, type CSSProperties, type ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 
 /** Number input that commits on blur/Enter and accepts empty = null. */
@@ -10,7 +10,6 @@ export function NumberField({
   placeholder,
   min,
   max,
-  step = 1,
   className,
   suffix,
   label,
@@ -22,28 +21,26 @@ export function NumberField({
   placeholder?: string
   min?: number
   max?: number
-  step?: number
   className?: string
   suffix?: ReactNode
   label?: string
   allowEmpty?: boolean
   inputClassName?: string
 }) {
-  const [text, setText] = useState(value === null || value === undefined ? '' : String(value))
-  useEffect(() => {
-    setText(value === null || value === undefined ? '' : String(value))
-  }, [value])
+  const show = (v: number | null | undefined) => (v === null || v === undefined ? '' : String(v))
+  const [text, setText] = useState(show(value))
+  useEffect(() => setText(show(value)), [value])
 
   const commit = () => {
     const t = text.trim().replace(/,/g, '')
     if (t === '') {
       if (allowEmpty) onChange(null)
-      else setText(value === null || value === undefined ? '' : String(value))
+      else setText(show(value))
       return
     }
     let n = Number(t)
     if (!Number.isFinite(n)) {
-      setText(value === null || value === undefined ? '' : String(value))
+      setText(show(value))
       return
     }
     if (min !== undefined) n = Math.max(min, n)
@@ -53,23 +50,22 @@ export function NumberField({
   }
 
   return (
-    <label className={cn('relative block', className)}>
-      {label && <span className="eyebrow mb-1 block">{label}</span>}
+    <label className={cn('block', className)}>
+      {label && <span className="t-label mb-1.5 block text-low">{label}</span>}
       <span className="relative block">
         <input
           type="text"
           inputMode="decimal"
           value={text}
-          step={step}
           placeholder={placeholder}
           onChange={(e) => setText(e.target.value)}
           onBlur={commit}
           onKeyDown={(e) => {
             if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
           }}
-          className={cn('input tabular-nums', suffix ? 'pr-10' : '', inputClassName)}
+          className={cn('input tabular-nums', suffix ? 'pr-9' : '', inputClassName)}
         />
-        {suffix && <span className="pointer-events-none absolute inset-y-0 right-3 grid place-items-center text-xs text-fg-subtle">{suffix}</span>}
+        {suffix && <span className="pointer-events-none absolute inset-y-0 right-3 grid place-items-center text-xs font-semibold text-low">{suffix}</span>}
       </span>
     </label>
   )
@@ -82,7 +78,6 @@ export function Stepper({
   min = 0,
   max,
   className,
-  size = 'md',
 }: {
   value: number
   onChange: (v: number) => void
@@ -91,72 +86,32 @@ export function Stepper({
   className?: string
   size?: 'sm' | 'md'
 }) {
-  const btn = size === 'sm' ? 'size-6' : 'size-7'
+  const btn = 'grid size-7 place-items-center text-mid transition-colors hover:bg-raised-3 hover:text-hi disabled:opacity-25'
   return (
-    <div className={cn('inline-flex items-center gap-1 rounded-lg border border-white/10 bg-black/20 p-0.5', className)}>
-      <button
-        type="button"
-        aria-label="Decrease"
-        disabled={value <= min}
-        onClick={() => onChange(Math.max(min, value - 1))}
-        className={cn('grid place-items-center rounded-md text-fg-muted transition hover:bg-white/10 hover:text-fg disabled:opacity-30', btn)}
-      >
+    <div className={cn('inline-flex h-7 items-stretch overflow-hidden rounded-[3px] border border-edge-2', className)}>
+      <button type="button" aria-label="Decrease" disabled={value <= min} onClick={() => onChange(Math.max(min, value - 1))} className={btn}>
         <Minus className="size-3.5" />
       </button>
-      <motion.span
-        key={value}
-        initial={{ y: -6, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="min-w-7 text-center text-sm font-semibold text-fg tabular-nums"
-      >
-        {value}
-        {max !== undefined && <span className="text-fg-subtle">/{max}</span>}
-      </motion.span>
-      <button
-        type="button"
-        aria-label="Increase"
-        disabled={max !== undefined && value >= max}
-        onClick={() => onChange(max !== undefined ? Math.min(max, value + 1) : value + 1)}
-        className={cn('grid place-items-center rounded-md text-fg-muted transition hover:bg-white/10 hover:text-fg disabled:opacity-30', btn)}
-      >
+      <span className="grid min-w-11 place-items-center border-x border-edge-2 px-1.5 text-[0.8rem] font-bold text-hi tabular-nums">
+        <motion.span key={value} initial={{ y: -5, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+          {value}
+          {max !== undefined && <span className="font-medium text-low">/{max}</span>}
+        </motion.span>
+      </span>
+      <button type="button" aria-label="Increase" disabled={max !== undefined && value >= max} onClick={() => onChange(max !== undefined ? Math.min(max, value + 1) : value + 1)} className={btn}>
         <Plus className="size-3.5" />
       </button>
     </div>
   )
 }
 
-export function Toggle({
-  checked,
-  onChange,
-  label,
-  className,
-}: {
-  checked: boolean
-  onChange: (v: boolean) => void
-  label?: ReactNode
-  className?: string
-}) {
+export function Toggle({ checked, onChange, label, className }: { checked: boolean; onChange: (v: boolean) => void; label?: ReactNode; className?: string }) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={cn('group inline-flex items-center gap-2.5 text-sm text-fg-muted', className)}
-    >
-      <span
-        className={cn(
-          'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border px-0.5 transition-colors duration-200',
-          checked ? 'justify-end border-gold-400/70 bg-gold-500/40' : 'justify-start border-white/15 bg-white/[0.06]',
-        )}
-      >
-        <motion.span
-          layout
-          transition={{ type: 'spring', stiffness: 500, damping: 32 }}
-          className={cn('size-3.5 rounded-full shadow', checked ? 'bg-gold-200' : 'bg-fg-subtle')}
-        />
+    <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)} className={cn('group inline-flex items-center gap-2.5 text-[0.84rem] text-mid', className)}>
+      <span className={cn('relative flex h-[18px] w-8 shrink-0 items-center rounded-[3px] border px-[2px] transition-colors', checked ? 'justify-end border-paper bg-paper' : 'justify-start border-edge-2')}>
+        <motion.span layout transition={{ type: 'spring', stiffness: 600, damping: 38 }} className={cn('size-3 rounded-[2px]', checked ? 'bg-ink' : 'bg-mid')} />
       </span>
-      {label && <span className="group-hover:text-fg">{label}</span>}
+      {label && <span className="group-hover:text-hi">{label}</span>}
     </button>
   )
 }
@@ -164,9 +119,10 @@ export function Toggle({
 export interface SegOption<T extends string | number> {
   value: T
   label: ReactNode
+  color?: string
 }
 
-/** Segmented control with a sliding highlight. */
+/** Segmented control; options can carry a colour (e.g. difficulty). */
 export function Segmented<T extends string | number>({
   value,
   onChange,
@@ -183,7 +139,7 @@ export function Segmented<T extends string | number>({
   const group = useId()
   return (
     <LayoutGroup id={group}>
-      <div className={cn('inline-flex flex-wrap items-center gap-0.5 rounded-xl border border-white/[0.08] bg-black/25 p-1', className)}>
+      <div className={cn('inline-flex flex-wrap items-stretch rounded-[4px] border border-edge-2 p-[3px]', className)}>
         {options.map((o) => {
           const active = o.value === value
           return (
@@ -192,16 +148,18 @@ export function Segmented<T extends string | number>({
               type="button"
               onClick={() => onChange(o.value)}
               className={cn(
-                'relative rounded-lg font-semibold transition-colors',
-                size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-[0.8rem]',
-                active ? 'text-ink-950' : 'text-fg-muted hover:text-fg',
+                'relative rounded-[2px] font-bold transition-colors',
+                size === 'sm' ? 'px-2.5 py-1 text-[0.72rem]' : 'px-3 py-1.5 text-[0.78rem]',
+                active ? 'text-ink' : 'text-mid hover:text-hi',
               )}
+              style={!active && o.color ? ({ color: o.color } as CSSProperties) : undefined}
             >
               {active && (
                 <motion.span
                   layoutId="seg"
-                  className="absolute inset-0 rounded-lg bg-gradient-to-b from-gold-300 to-gold-500 shadow-[0_4px_16px_-6px_rgb(232_168_58/0.7)]"
-                  transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                  className="absolute inset-0 rounded-[2px]"
+                  style={{ background: o.color ?? 'var(--color-paper)' }}
+                  transition={{ type: 'spring', stiffness: 520, damping: 40 }}
                 />
               )}
               <span className="relative z-10 inline-flex items-center gap-1.5">{o.label}</span>
@@ -228,17 +186,60 @@ export function Select<T extends string>({
 }) {
   return (
     <label className={cn('block', className)}>
-      {label && <span className="eyebrow mb-1 block">{label}</span>}
+      {label && <span className="t-label mb-1.5 block text-low">{label}</span>}
       <span className="relative block">
         <select value={value} onChange={(e) => onChange(e.target.value as T)} className="input cursor-pointer appearance-none pr-8">
           {options.map((o) => (
-            <option key={o.value} value={o.value} className="bg-ink-850">
+            <option key={o.value} value={o.value} className="bg-raised">
               {o.label}
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-fg-subtle" />
+        <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-low" />
       </span>
     </label>
+  )
+}
+
+/** Row of clickable blocks for a 0…max count (stages, floors). Clicking the current top block steps back one. */
+export function SegmentPicker({
+  value,
+  max,
+  onChange,
+  color = 'var(--color-paper)',
+  marks,
+  label,
+  className,
+}: {
+  value: number
+  max: number
+  onChange: (v: number) => void
+  color?: string
+  marks?: number[]
+  label: string
+  className?: string
+}) {
+  return (
+    <div className={cn('flex gap-[3px]', className)} role="group" aria-label={label}>
+      {Array.from({ length: max }).map((_, i) => {
+        const n = i + 1
+        const on = n <= value
+        const mark = marks?.includes(n)
+        return (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(value === n ? n - 1 : n)}
+            title={`${n}`}
+            aria-label={`${label} ${n}`}
+            aria-pressed={on}
+            className={cn('relative h-7 min-w-0 flex-1 rounded-[2px] transition-colors', !on && 'bg-white/[0.07] hover:bg-white/[0.16]')}
+            style={on ? ({ background: color } as CSSProperties) : undefined}
+          >
+            {mark && <span className={cn('absolute -bottom-2 left-1/2 h-1 w-px -translate-x-1/2', on ? 'bg-hi' : 'bg-mid')} />}
+          </button>
+        )
+      })}
+    </div>
   )
 }

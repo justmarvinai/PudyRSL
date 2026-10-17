@@ -26,7 +26,7 @@ function SubtaskRow({ label, refs }: { label: string; refs: CheckRef[] }) {
       <button
         type="button"
         onClick={() => setRefs(refs, !done)}
-        className={cn('text-left text-[0.8rem] transition-colors', done ? 'text-fg-subtle line-through decoration-white/20' : 'text-fg-muted hover:text-fg')}
+        className={cn('text-left text-[0.82rem] transition-colors', done ? 'text-low line-through decoration-edge-2' : 'text-mid hover:text-hi')}
       >
         {label}
       </button>
@@ -54,21 +54,21 @@ export function TaskItem({
       id={task.id}
       layout="position"
       className={cn(
-        'group relative scroll-mt-28 rounded-xl border transition-colors',
-        compact ? 'p-3' : 'p-4',
-        done ? 'border-white/[0.04] bg-white/[0.015]' : 'border-white/[0.07] bg-white/[0.025] hover:border-gold-400/20 hover:bg-white/[0.04]',
+        'group relative scroll-mt-28 rounded-[3px] border transition-colors',
+        compact ? 'p-3' : 'px-4 py-3.5',
+        done ? 'border-edge bg-transparent' : 'border-edge bg-raised-2 hover:border-edge-2',
       )}
     >
       <div className="flex items-start gap-3">
-        <div className="flex flex-col items-center gap-1 pt-0.5">
+        <div className="flex flex-col items-center gap-1.5 pt-0.5">
           <Check checked={done} partial={partial} onChange={toggle} label="Mark task done" />
-          {index !== undefined && <span className="text-[0.62rem] font-bold text-fg-subtle tabular-nums">{index + 1}</span>}
+          {index !== undefined && <span className="t-num text-[0.66rem] text-low">{String(index + 1).padStart(2, '0')}</span>}
         </div>
         <div className="min-w-0 flex-1">
           <Rich
             as="div"
             text={task.text}
-            className={cn('leading-relaxed transition-opacity', compact ? 'text-[0.82rem]' : 'text-[0.875rem]', done ? 'text-fg-subtle opacity-70' : 'text-fg-muted')}
+            className={cn('leading-relaxed transition-opacity', compact ? 'text-[0.84rem]' : 'text-[0.9rem]', done ? 'text-low opacity-60 [&_*]:!text-low' : 'text-mid')}
           />
           {(task.subtasks || task.to) && (
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
@@ -76,7 +76,7 @@ export function TaskItem({
                 <button
                   type="button"
                   onClick={() => setOpen((o) => !o)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.07] bg-black/20 px-2 py-1 text-[0.72rem] font-semibold text-fg-muted transition hover:border-gold-400/30 hover:text-fg"
+                  className="inline-flex h-6 items-center gap-1.5 rounded-[3px] border border-edge-2 px-2 text-[0.72rem] font-bold text-mid transition-colors hover:border-mid hover:text-hi"
                 >
                   <span className="tabular-nums">
                     {subDone}/{task.subtasks.length}
@@ -88,7 +88,7 @@ export function TaskItem({
               {task.to && (
                 <Link
                   to={task.to}
-                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[0.72rem] font-semibold text-gold-400/90 transition hover:bg-gold-400/10 hover:text-gold-300"
+                  className="inline-flex h-6 items-center gap-1 rounded-[3px] px-2 text-[0.72rem] font-bold text-hi transition-colors hover:bg-raised-3"
                 >
                   Open <ArrowUpRight className="size-3.5" />
                 </Link>
@@ -102,7 +102,7 @@ export function TaskItem({
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.22 }}
-                className="mt-2 space-y-1.5 overflow-hidden border-l border-white/[0.08] pl-3"
+                className="mt-2.5 space-y-1.5 overflow-hidden border-l border-edge-2 pl-3"
               >
                 {task.subtasks.map((st) => (
                   <SubtaskRow key={st.label} label={st.label} refs={st.refs} />

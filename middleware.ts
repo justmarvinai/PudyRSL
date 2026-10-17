@@ -12,12 +12,14 @@ export const LOGIN_PATH = '/__pudy/login'
 export const LOGOUT_PATH = '/__pudy/logout'
 const YEAR = 60 * 60 * 24 * 365
 const PUBLIC_PATHS = new Set(['/robots.txt'])
+// The lock screen's own font (Mona Sans, SIL OFL) must load before you sign in.
+const PUBLIC_PREFIX = '/fonts/'
 
 export default async function middleware(request: Request): Promise<Response> {
   const url = new URL(request.url)
   const path = url.pathname
 
-  if (PUBLIC_PATHS.has(path)) return next()
+  if (PUBLIC_PATHS.has(path) || path.startsWith(PUBLIC_PREFIX)) return next()
 
   const password = process.env.PUDY_PASSWORD
   if (!password) return html(lockPage({ mode: 'setup' }), 503)
@@ -110,7 +112,7 @@ function html(body: string, status: number): Response {
 const escapeHtml = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string)
 
-const LOGO = `<svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe2a1"/><stop offset=".55" stop-color="#e8a83a"/><stop offset="1" stop-color="#a8571a"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="15" fill="#0b0e15" stroke="rgba(255,255,255,.08)"/><path d="M32 9 50 16v13c0 12-7.8 20.6-18 24.6C21.8 49.6 14 41 14 29V16z" fill="none" stroke="url(#g)" stroke-width="3.6" stroke-linejoin="round"/><path d="M26 42V22h8.2a6.2 6.2 0 0 1 0 12.4H26" fill="none" stroke="url(#g)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+const LOGO = `<svg viewBox="0 0 64 64" width="44" height="44" aria-hidden="true"><rect width="64" height="64" rx="6" fill="#f3efe6"/><path d="M17 52V12h17.5C44.2 12 50 17.6 50 26.2S44.2 40.4 34.5 40.4H27.6V52Z" fill="#0b0b0c"/><path d="M27.6 21v10.6h6c3.5 0 5.6-2 5.6-5.3S37.1 21 33.6 21Z" fill="#f3efe6"/></svg>`
 
 export function lockPage(opts: { mode: 'login' | 'setup'; error?: boolean; next?: string }): string {
   const body =
@@ -128,7 +130,7 @@ export function lockPage(opts: { mode: 'login' | 'setup'; error?: boolean; next?
            <label for="pw">Password</label>
            <div class="field${opts.error ? ' shake' : ''}">
              <input id="pw" name="password" type="password" required autofocus autocomplete="current-password" placeholder="Enter your password">
-             <button type="button" class="eye" aria-label="Show password" onclick="var i=document.getElementById('pw');i.type=i.type==='password'?'text':'password'">◉</button>
+             <button type="button" class="eye" aria-label="Show password" onclick="var i=document.getElementById('pw');var show=i.type==='password';i.type=show?'text':'password';this.textContent=show?'Hide':'Show'">Show</button>
            </div>
            ${opts.error ? '<p class="error" role="alert">Wrong password — try again.</p>' : ''}
            <label class="remember"><input type="checkbox" name="remember" checked> Remember this device for a year</label>
@@ -141,65 +143,64 @@ export function lockPage(opts: { mode: 'login' | 'setup'; error?: boolean; next?
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#07080c">
+<meta name="theme-color" content="#0b0b0c">
 <title>PudyRSL — Locked</title>
 <link rel="icon" href="data:image/svg+xml,${encodeURIComponent(LOGO)}">
+<link rel="preload" href="${PUBLIC_PREFIX}mona-sans-latin-wdth.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+  @font-face{font-family:"Mona Sans";src:url(${PUBLIC_PREFIX}mona-sans-latin-wdth.woff2) format("woff2-variations");font-weight:200 900;font-stretch:75% 125%;font-display:swap}
   *{box-sizing:border-box}
-  html,body{margin:0;min-height:100%;background:#05060a;color:#e9ebf3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
-  body{min-height:100vh;display:grid;place-items:center;padding:24px;overflow:hidden;
-    background:
-      radial-gradient(700px 420px at 18% -5%, rgba(232,168,58,.16), transparent 60%),
-      radial-gradient(620px 420px at 95% 0%, rgba(122,60,255,.13), transparent 60%),
-      radial-gradient(700px 500px at 50% 120%, rgba(242,85,74,.08), transparent 60%),
-      #05060a}
-  .grid{position:fixed;inset:0;pointer-events:none;opacity:.4;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:56px 56px;-webkit-mask-image:radial-gradient(ellipse at 50% 30%,#000 15%,transparent 70%);mask-image:radial-gradient(ellipse at 50% 30%,#000 15%,transparent 70%)}
-  .card{position:relative;width:100%;max-width:400px;padding:36px 32px 30px;border-radius:22px;
-    background:linear-gradient(180deg,rgba(25,30,43,.82),rgba(12,15,22,.9));border:1px solid rgba(255,255,255,.07);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 40px 80px -30px rgba(0,0,0,.9),0 0 0 1px rgba(246,196,99,.04);
-    animation:rise .6s cubic-bezier(.22,1,.36,1) both}
-  .brand{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:26px;text-align:center}
-  .logo{filter:drop-shadow(0 0 22px rgba(232,168,58,.35));animation:float 6s ease-in-out infinite}
-  h1{margin:0;font-family:"Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;font-size:30px;letter-spacing:.06em;font-weight:700}
-  h1 .gold{background:linear-gradient(100deg,#fff1cf,#f6c463 40%,#e8a83a 65%,#ffdc96);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .sub{margin:4px 0 0;font-size:13px;color:#6f788e;letter-spacing:.04em}
-  h2{font-size:17px;margin:0 0 6px}
-  .muted{color:#a1a9bd;font-size:14px;margin:0 0 14px}
-  ol{margin:0;padding-left:20px;color:#a1a9bd;font-size:14px;line-height:1.7}
-  code{background:rgba(255,255,255,.07);padding:2px 6px;border-radius:6px;color:#ffdc96}
-  label{display:block;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#6f788e;margin-bottom:8px}
+  html,body{margin:0;min-height:100%;background:#0b0b0c;color:#f2f2f3;font-family:"Mona Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  body{min-height:100vh;display:grid;place-items:center;padding:24px}
+  main{width:100%;max-width:420px;animation:rise .45s cubic-bezier(.22,1,.36,1) both}
+  .brand{display:flex;align-items:center;gap:14px}
+  .mark{display:block;flex-shrink:0}
+  .kicker{font-stretch:85%;font-weight:700;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#6c6c75}
+  .rule{display:flex;align-items:center;gap:12px;margin-top:28px}
+  .rule .line{height:1px;flex:1;background:#242428}
+  h1{margin:18px 0 0;font-stretch:125%;font-weight:900;font-size:56px;line-height:.86;letter-spacing:-.01em;text-transform:uppercase}
+  h1 span{color:#6c6c75}
+  .sub{margin:14px 0 0;font-size:14px;color:#a3a3ab}
+  .card{margin-top:28px;padding:22px;border-radius:4px;background:#121214;border:1px solid #242428}
+  h2{font-stretch:112%;font-size:20px;font-weight:800;letter-spacing:-.02em;margin:0 0 6px}
+  .muted{color:#a3a3ab;font-size:14px;margin:0 0 14px}
+  ol{margin:0;padding-left:20px;color:#a3a3ab;font-size:14px;line-height:1.7}
+  ol b{color:#f2f2f3}
+  code{border:1px solid #34343a;padding:1px 6px;border-radius:3px;color:#f2f2f3;font-weight:700;font-size:13px}
+  label{display:block;font-stretch:85%;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6c6c75;margin-bottom:8px}
   .field{position:relative}
-  input[type=password],input[type=text]{width:100%;height:48px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(5,6,10,.7);color:#fff;padding:0 46px 0 16px;font-size:15px;outline:none;transition:border-color .15s,box-shadow .15s}
-  input[type=password]:focus,input[type=text]:focus{border-color:rgba(246,196,99,.6);box-shadow:0 0 0 4px rgba(246,196,99,.12)}
-  .eye{position:absolute;right:8px;top:8px;width:32px;height:32px;border:0;border-radius:8px;background:transparent;color:#6f788e;cursor:pointer;font-size:14px}
-  .eye:hover{color:#f6c463;background:rgba(255,255,255,.05)}
-  .remember{display:flex;align-items:center;gap:9px;margin:16px 0 20px;font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;color:#a1a9bd;cursor:pointer}
-  .remember input{accent-color:#e8a83a;width:16px;height:16px}
-  .unlock{width:100%;height:48px;border-radius:12px;border:1px solid rgba(255,220,150,.5);cursor:pointer;font-size:15px;font-weight:700;letter-spacing:.02em;color:#1b1206;
-    background:linear-gradient(180deg,#f6c463,#d8952b);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 12px 30px -12px rgba(232,168,58,.7);transition:transform .1s,filter .15s}
-  .unlock:hover{filter:brightness(1.08)}
+  input[type=password],input[type=text]{width:100%;height:46px;border-radius:4px;border:1px solid #34343a;background:#0b0b0c;color:#fff;padding:0 64px 0 14px;font:inherit;font-size:15px;outline:none;transition:border-color .12s}
+  input[type=password]:focus,input[type=text]:focus{border-color:#f3efe6}
+  .eye{position:absolute;right:6px;top:7px;height:32px;padding:0 10px;border:0;border-radius:3px;background:transparent;color:#a3a3ab;cursor:pointer;font:inherit;font-stretch:85%;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+  .eye:hover{color:#f2f2f3;background:#202024}
+  .remember{display:flex;align-items:center;gap:9px;margin:16px 0 18px;font-stretch:100%;font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;color:#a3a3ab;cursor:pointer}
+  .remember input{accent-color:#f3efe6;width:16px;height:16px;margin:0}
+  .unlock{width:100%;height:46px;border-radius:4px;border:1px solid #f3efe6;cursor:pointer;font:inherit;font-stretch:110%;font-size:14px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#0b0b0c;background:#f3efe6;transition:background-color .12s}
+  .unlock:hover{background:#fff}
   .unlock:active{transform:translateY(1px)}
-  .error{color:#ff8a8a;font-size:13px;margin:10px 0 0}
+  .error{color:#ff5555;font-size:13px;font-weight:600;margin:10px 0 0}
   .shake{animation:shake .45s ease}
-  .foot{margin-top:22px;text-align:center;font-size:11.5px;color:#4b5366;letter-spacing:.05em}
-  @keyframes rise{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
-  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  .foot{margin-top:18px;display:flex;justify-content:space-between;font-stretch:85%;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6c6c75}
+  :focus-visible{outline:2px solid #f3efe6;outline-offset:2px}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   @keyframes shake{10%,90%{transform:translateX(-1px)}20%,80%{transform:translateX(3px)}30%,50%,70%{transform:translateX(-6px)}40%,60%{transform:translateX(6px)}}
+  @media (max-width:420px){h1{font-size:44px}}
   @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 </head>
 <body>
-<div class="grid"></div>
-<main class="card">
+<main>
   <div class="brand">
-    <div class="logo">${LOGO}</div>
-    <div>
-      <h1><span class="gold">Pudy</span>RSL</h1>
-      <p class="sub">Private progression companion</p>
-    </div>
+    <span class="mark">${LOGO}</span>
+    <span class="kicker">Private progression companion</span>
   </div>
+  <div class="rule"><span class="kicker">Locked</span><span class="line"></span></div>
+  <h1>Pudy<span>RSL</span></h1>
+  <p class="sub">Your Raid: Shadow Legends guide, behind a password.</p>
+  <div class="card">
   ${body}
-  <div class="foot">🔒 Private · Raid: Shadow Legends</div>
+  </div>
+  <div class="foot"><span>Private</span><span>Raid: Shadow Legends</span></div>
 </main>
 </body>
 </html>`

@@ -5,6 +5,7 @@ import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import guideMarkdown from '../../rsl_data.md?raw'
 import { PageHeader } from '../components/layout/PageHeader'
+import { highlightText, LabelTag } from '../components/ui/Rich'
 import { Kbd } from '../components/ui/primitives'
 import { guideMeta } from '../data/guide'
 import { cn } from '../lib/cn'
@@ -39,6 +40,25 @@ function buildToc(md: string): TocItem[] {
     })
 }
 
+const LABEL = /\[((?:Sourced|My )[^\]]*)\]/g
+
+/** Colour-codes Raid terms and turns [Sourced] / [My call] into tags, leaving links and code alone. */
+function hl(children: ReactNode): ReactNode {
+  return Children.map(children, (child) => {
+    if (typeof child !== 'string') return child
+    const out: ReactNode[] = []
+    let last = 0
+    for (const m of child.matchAll(LABEL)) {
+      const at = m.index ?? 0
+      if (at > last) out.push(...highlightText(child.slice(last, at), true, `s${last}-`))
+      out.push(<LabelTag key={`l${at}`} label={m[1]} />)
+      last = at + m[0].length
+    }
+    if (last < child.length) out.push(...highlightText(child.slice(last), true, `s${last}-`))
+    return out
+  })
+}
+
 const headingComponents: Components = {
   h2: ({ children }) => {
     const t = textOf(Children.toArray(children))
@@ -48,6 +68,11 @@ const headingComponents: Components = {
     const t = textOf(Children.toArray(children))
     return <h3 id={slug(t)}>{children}</h3>
   },
+  p: ({ children }) => <p>{hl(children)}</p>,
+  li: ({ children, className }) => <li className={className}>{hl(children)}</li>,
+  td: ({ children }) => <td>{hl(children)}</td>,
+  strong: ({ children }) => <strong>{hl(children)}</strong>,
+  em: ({ children }) => <em>{hl(children)}</em>,
   a: ({ href, children }) => (
     <a href={href} target="_blank" rel="noreferrer noopener">
       {children}
@@ -149,7 +174,7 @@ export default function Guide() {
 
   return (
     <div>
-      <style>{`::highlight(guide-search){background:rgb(246 196 99 / 0.28);color:#fff}::highlight(guide-current){background:rgb(246 196 99 / 0.85);color:#120c03}`}</style>
+      <style>{`::highlight(guide-search){background:rgb(243 239 230 / 0.22);color:#fff}::highlight(guide-current){background:#f3efe6;color:#0b0b0c}`}</style>
       <PageHeader
         eyebrow={`${guideMeta.date} · ${guideMeta.author}`}
         title="Full guide"
@@ -164,8 +189,8 @@ export default function Guide() {
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-[260px_1fr]">
         <aside className="hidden xl:block">
           <div className="sticky top-24 max-h-[calc(100dvh-7rem)] overflow-y-auto pr-2">
-            <div className="eyebrow mb-3">Contents</div>
-            <nav className="space-y-0.5 border-l border-white/[0.07]">
+            <div className="t-label mb-3 text-low">Contents</div>
+            <nav className="space-y-0.5 border-l border-edge">
               {toc.map((t) => (
                 <a
                   key={t.id}
@@ -176,9 +201,9 @@ export default function Guide() {
                     history.replaceState(null, '', `#${t.id}`)
                   }}
                   className={cn(
-                    '-ml-px block border-l py-1 text-[0.78rem] leading-snug transition-colors',
-                    t.level === 3 ? 'pl-6' : 'pl-3 font-semibold',
-                    activeId === t.id ? 'border-gold-400 text-gold-300' : 'border-transparent text-fg-subtle hover:text-fg',
+                    '-ml-px block border-l-2 py-1 text-[0.8rem] leading-snug transition-colors',
+                    t.level === 3 ? 'pl-6' : 'pl-3 font-bold',
+                    activeId === t.id ? 'border-paper text-hi' : 'border-transparent text-low hover:text-hi',
                   )}
                 >
                   {t.text}
@@ -189,8 +214,8 @@ export default function Guide() {
         </aside>
 
         <div className="min-w-0">
-          <div className="sticky top-[4.5rem] z-10 mb-6 flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-ink-900/85 p-2 backdrop-blur-xl">
-            <Search className="ml-2 size-4 text-fg-subtle" />
+          <div className="sticky top-[4.25rem] z-10 mb-6 flex items-center gap-2 rounded-[4px] border border-edge-2 bg-raised p-1.5 shadow-[0_12px_30px_-12px_rgb(0_0_0/0.9)]">
+            <Search className="ml-2 size-4 text-low" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -198,10 +223,10 @@ export default function Guide() {
                 if (e.key === 'Enter') step(e.shiftKey ? -1 : 1)
               }}
               placeholder="Find in the guide…"
-              className="h-9 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-fg-subtle"
+              className="h-9 flex-1 bg-transparent text-[0.9rem] font-medium text-hi outline-none placeholder:text-low"
             />
             {query.trim().length >= 2 && (
-              <span className="text-xs text-fg-subtle tabular-nums">{matches.length ? `${current + 1}/${matches.length}` : 'No matches'}</span>
+              <span className="text-xs font-semibold text-low tabular-nums">{matches.length ? `${current + 1}/${matches.length}` : 'No matches'}</span>
             )}
             <button type="button" className="btn btn-ghost size-8 p-0" onClick={() => step(-1)} aria-label="Previous match">
               <ChevronUp className="size-4" />
@@ -212,7 +237,7 @@ export default function Guide() {
             <Kbd className="mr-1 hidden sm:inline-flex">↵</Kbd>
           </div>
 
-          <motion.article ref={article} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card prose-guide p-6 sm:p-10">
+          <motion.article ref={article} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="panel prose-guide rich px-6 py-8 sm:px-12 sm:py-12">
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={headingComponents}>
               {guideMarkdown}
             </ReactMarkdown>

@@ -1,13 +1,14 @@
 import { motion } from 'motion/react'
-import { CalendarDays, Download, HardDrive, Keyboard, LockKeyhole, RotateCcw, ShieldCheck, Upload, User } from 'lucide-react'
+import { Download, ExternalLink, LockKeyhole, RotateCcw, Upload } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { PageHeader } from '../components/layout/PageHeader'
 import { Select } from '../components/ui/Fields'
 import { Modal } from '../components/ui/Overlay'
-import { Callout, Card, Kbd, SectionTitle } from '../components/ui/primitives'
+import { Callout, Kbd, Panel } from '../components/ui/primitives'
 import { guideMeta } from '../data/guide'
 import { downloadBackup, importBackupFile, lockSite } from '../lib/backup'
 import { formatLongDate, weekdays } from '../lib/dates'
+import { raidData, raidSource } from '../lib/rsl'
 import { pickData, useStore } from '../lib/store'
 import { toast } from '../lib/toast'
 
@@ -27,19 +28,18 @@ export function Settings() {
   }, [])
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader eyebrow="PudyRSL" title="Settings & backup" intro="Your progress is saved in this browser only. Download a backup now and then, and restore it on another device or browser." />
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <Card>
-          <SectionTitle eyebrow="You" title={<span className="inline-flex items-center gap-2"><User className="size-4 text-gold-400" /> Profile & plan</span>} />
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <Panel kicker="You" title="Profile & plan">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="eyebrow mb-1 block">Display name</span>
+              <span className="t-label mb-1.5 block text-low">Display name</span>
               <input className="input" value={s.profileName} onChange={(e) => s.setSettings({ profileName: e.target.value })} placeholder="Your name" />
             </label>
             <label className="block">
-              <span className="eyebrow mb-1 block">Plan start date (Day 1)</span>
+              <span className="t-label mb-1.5 block text-low">Plan start date (Day 1)</span>
               <input
                 type="date"
                 className="input [color-scheme:dark]"
@@ -48,7 +48,7 @@ export function Settings() {
               />
             </label>
           </div>
-          <p className="mt-2 text-[0.75rem] text-fg-subtle">
+          <p className="mt-2 text-[0.76rem] text-low">
             The guide is dated {guideMeta.date}, so Day 1 defaults to {formatLongDate(guideMeta.dateISO)}. The day counter decides which roadmap phase is
             highlighted.
           </p>
@@ -66,13 +66,12 @@ export function Settings() {
               options={weekdays.map((d, i) => ({ value: String(i), label: d }))}
             />
           </div>
-          <p className="mt-2 text-[0.75rem] text-fg-subtle">Set these to match when your game day and Hydra/Chimera week roll over.</p>
-        </Card>
+          <p className="mt-2 text-[0.76rem] text-low">Set these to match when your game day and Hydra/Chimera week roll over.</p>
+        </Panel>
 
-        <Card>
-          <SectionTitle eyebrow="Your data" title={<span className="inline-flex items-center gap-2"><HardDrive className="size-4 text-gold-400" /> Backup & restore</span>} />
+        <Panel kicker="Your data" title="Backup & restore">
           <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn btn-gold" onClick={downloadBackup}>
+            <button type="button" className="btn btn-primary" onClick={downloadBackup}>
               <Download className="size-4" /> Download backup
             </button>
             <button type="button" className="btn" onClick={() => fileInput.current?.click()}>
@@ -103,39 +102,38 @@ export function Settings() {
               if (f) await importBackupFile(f)
             }}
             animate={{ scale: dragging ? 1.01 : 1 }}
-            className={`mt-4 rounded-xl border border-dashed px-4 py-6 text-center text-sm transition-colors ${dragging ? 'border-gold-400/70 bg-gold-400/[0.06] text-gold-200' : 'border-white/12 text-fg-subtle'}`}
+            className={`mt-4 rounded-[3px] border border-dashed px-4 py-7 text-center text-sm transition-colors ${dragging ? 'border-paper bg-raised-3 text-hi' : 'border-edge-2 text-low'}`}
           >
-            Drop a <span className="text-fg-muted">pudyrsl-backup-….json</span> file here to restore it
+            Drop a <span className="font-semibold text-mid">pudyrsl-backup-….json</span> file here to restore it
           </motion.div>
-          <dl className="mt-4 grid grid-cols-2 gap-3 text-[0.8rem]">
-            <div className="card-flat px-3 py-2">
-              <dt className="eyebrow">Last backup</dt>
-              <dd className="mt-0.5 text-fg">{s.ui.lastBackupAt ? new Date(s.ui.lastBackupAt).toLocaleString('en-US') : 'Never'}</dd>
+          <dl className="mt-4 grid grid-cols-2 gap-2 text-[0.82rem]">
+            <div className="well px-3 py-2.5">
+              <dt className="t-label text-low">Last backup</dt>
+              <dd className="mt-1 font-semibold text-hi">{s.ui.lastBackupAt ? new Date(s.ui.lastBackupAt).toLocaleString('en-US') : 'Never'}</dd>
             </div>
-            <div className="card-flat px-3 py-2">
-              <dt className="eyebrow">Saved data</dt>
-              <dd className="mt-0.5 text-fg">
+            <div className="well px-3 py-2.5">
+              <dt className="t-label text-low">Saved data</dt>
+              <dd className="mt-1 font-semibold text-hi">
                 {(size / 1024).toFixed(1)} KB {persisted ? <span className="text-ok">· protected</span> : null}
               </dd>
             </div>
           </dl>
           <Callout tone="info" className="mt-4" text="Restoring replaces everything currently saved in this browser with the file's contents." />
-        </Card>
+        </Panel>
 
-        <Card>
-          <SectionTitle eyebrow="Access" title={<span className="inline-flex items-center gap-2"><ShieldCheck className="size-4 text-gold-400" /> Password lock</span>} />
-          <p className="text-[0.84rem] leading-relaxed text-fg-muted">
-            On Vercel, every page and file sits behind the PudyRSL lock screen. The password is the <code className="rounded bg-white/[0.06] px-1.5 py-0.5 text-gold-200">PUDY_PASSWORD</code>{' '}
-            environment variable in your Vercel project. Changing it signs out every device.
+        <Panel kicker="Access" title="Password lock">
+          <p className="text-[0.86rem] leading-relaxed text-mid">
+            On Vercel, every page and file sits behind the PudyRSL lock screen. The password is the{' '}
+            <code className="rounded-[3px] border border-edge-2 px-1.5 py-0.5 text-[0.8rem] font-semibold text-hi">PUDY_PASSWORD</code> environment variable in your Vercel project. Changing it
+            signs out every device.
           </p>
           <button type="button" className="btn mt-4" onClick={lockSite}>
             <LockKeyhole className="size-4" /> Lock this device now
           </button>
-        </Card>
+        </Panel>
 
-        <Card>
-          <SectionTitle eyebrow="Faster" title={<span className="inline-flex items-center gap-2"><Keyboard className="size-4 text-gold-400" /> Keyboard shortcuts</span>} />
-          <div className="grid grid-cols-1 gap-x-6 gap-y-2 text-[0.82rem] text-fg-muted sm:grid-cols-2">
+        <Panel kicker="Faster" title="Keyboard shortcuts">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-2 text-[0.84rem] text-mid sm:grid-cols-2">
             {[
               [['Ctrl', 'K'], 'Search'],
               [['/'], 'Search'],
@@ -156,29 +154,52 @@ export function Settings() {
               </div>
             ))}
           </div>
-        </Card>
+        </Panel>
+
+        <Panel kicker="Credits" title="Game data & type" className="xl:col-span-2">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="text-[0.86rem] leading-relaxed text-mid">
+              <p>
+                Champion portraits, buff/debuff icons, skill tooltips and base stats come from{' '}
+                <a href={raidSource.url} target="_blank" rel="noreferrer noopener" className="inline-flex items-center gap-1 font-bold text-hi underline decoration-edge-2 underline-offset-4 hover:decoration-paper">
+                  {raidSource.name} {raidSource.version} <ExternalLink className="size-3" />
+                </a>{' '}
+                ({raidSource.license}) — a free, open dataset. {raidSource.credits}
+              </p>
+              <p className="mt-2 text-low">
+                It is an April 2021 snapshot bundled into this site ({Object.keys(raidData.champions).length} champions, {Object.keys(raidData.icons).length} effect icons). Champions that
+                aren&apos;t in it — Gizmak, Galleus, Ninja, Rathalos, Artak, Ultimate Deathknight and Ruella — show a monogram instead of art. Your guide always wins where they differ.
+              </p>
+            </div>
+            <div className="text-[0.86rem] leading-relaxed text-mid">
+              <p>
+                Type is <span className="font-bold text-hi">Mona Sans</span> by GitHub (SIL Open Font License), self-hosted. There is no official Raid: Shadow Legends API; Raid and its art are
+                © Plarium. PudyRSL is a private fan tool.
+              </p>
+              <p className="mt-2 text-low">
+                Built from “{guideMeta.title}” ({guideMeta.date}).
+              </p>
+            </div>
+          </div>
+        </Panel>
       </div>
 
-      <Card className="border-bad/20">
+      <Panel style={{ boxShadow: 'inset 3px 0 0 var(--color-bad)' }}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="text-[0.95rem] font-semibold text-fg">Reset all progress</div>
-            <div className="text-[0.8rem] text-fg-subtle">Clears every tick, counter, note and setting in this browser. Download a backup first.</div>
+            <div className="t-title text-[1rem] text-hi">Reset all progress</div>
+            <div className="text-[0.82rem] text-low">Clears every tick, counter, note and setting in this browser. Download a backup first.</div>
           </div>
           <button type="button" className="btn btn-danger" onClick={() => setConfirmOpen(true)}>
             <RotateCcw className="size-4" /> Reset…
           </button>
         </div>
-      </Card>
-
-      <div className="flex items-center gap-2 text-[0.72rem] text-fg-subtle">
-        <CalendarDays className="size-3.5" /> Built from “{guideMeta.title}” ({guideMeta.date}).
-      </div>
+      </Panel>
 
       <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Reset all progress?">
         <div className="space-y-4 p-5">
-          <p className="text-sm text-fg-muted">
-            This can&apos;t be undone. Type <span className="font-mono font-semibold text-bad">RESET</span> to confirm.
+          <p className="text-sm text-mid">
+            This can&apos;t be undone. Type <span className="font-extrabold text-bad">RESET</span> to confirm.
           </p>
           <input className="input" value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder="RESET" autoFocus />
           <div className="flex justify-end gap-2">
