@@ -1,5 +1,4 @@
-import '@fontsource-variable/inter'
-import '@fontsource-variable/cinzel'
+import '@fontsource-variable/mona-sans/wdth.css'
 import './index.css'
 import { MotionConfig } from 'motion/react'
 import { StrictMode } from 'react'

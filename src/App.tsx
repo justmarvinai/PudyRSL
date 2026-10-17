@@ -17,7 +17,7 @@ import { Settings } from './pages/Settings'
 const Guide = lazy(() => import('./pages/Guide'))
 
 const Lazy = ({ children }: { children: ReactNode }) => (
-  <Suspense fallback={<div className="py-24 text-center text-sm text-fg-subtle">Loading the guide…</div>}>{children}</Suspense>
+  <Suspense fallback={<div className="t-label py-24 text-center text-low">Loading the guide…</div>}>{children}</Suspense>
 )
 
 export function App() {

@@ -1,13 +1,11 @@
 import { motion } from 'motion/react'
-import { CalendarDays, Check as CheckIcon, Flag } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link } from 'react-router'
 import { PageHeader } from '../components/layout/PageHeader'
 import { TaskItem } from '../components/roadmap/TaskItem'
 import { Toggle } from '../components/ui/Fields'
-import { Burst } from '../components/ui/Overlay'
-import { ProgressRing } from '../components/ui/Progress'
-import { Pill } from '../components/ui/primitives'
+import { Segments } from '../components/ui/Progress'
+import { Tag } from '../components/ui/primitives'
 import { phases, roadmapIntro, type Phase } from '../data/roadmap'
 import { isTaskDone, phaseProgress } from '../lib/checks'
 import { cn } from '../lib/cn'
@@ -23,78 +21,62 @@ const dayLabel = (p: Phase) => {
   return `Days ${a}–${b}`
 }
 
-function PhaseBlock({ phase, isCurrent, hideDone }: { phase: Phase; isCurrent: boolean; hideDone: boolean }) {
+function PhaseBlock({ phase, index, isCurrent, hideDone }: { phase: Phase; index: number; isCurrent: boolean; hideDone: boolean }) {
   const flags = useStore((s) => s.flags)
   const nums = useStore((s) => s.nums)
   const st = { flags, nums }
   const { done, total } = phaseProgress(st, phase)
   const complete = done === total
-  const [burst, setBurst] = useState(false)
   const prev = useRef(complete)
 
   useEffect(() => {
-    if (complete && !prev.current) {
-      setBurst(true)
-      toast(`${phase.short} complete — great work!`)
-    }
+    if (complete && !prev.current) toast(`${phase.short} complete — great work!`)
     prev.current = complete
   }, [complete, phase.short])
 
   const tasks = hideDone ? phase.tasks.filter((t) => !isTaskDone(st, t)) : phase.tasks
 
   return (
-    <section id={phase.id} className="relative scroll-mt-24 pl-12 sm:pl-16">
-      {/* timeline node */}
-      <div className="absolute top-1 left-0 sm:left-2">
-        <div className="relative">
-          <Burst show={burst} onDone={() => setBurst(false)} />
-          <motion.div
-            className={cn(
-              'grid size-9 place-items-center rounded-full border-2',
-              complete
-                ? 'border-gold-400 bg-gradient-to-b from-gold-400 to-gold-600 text-ink-950 shadow-[0_0_20px_rgb(246_196_99/0.6)]'
-                : isCurrent
-                  ? 'animate-pulse-ring border-gold-400 bg-ink-900 text-gold-300'
-                  : 'border-white/15 bg-ink-900 text-fg-subtle',
-            )}
-            animate={complete ? { scale: [1, 1.18, 1] } : {}}
-            transition={{ duration: 0.5 }}
-          >
-            {complete ? <CheckIcon className="size-4" strokeWidth={3} /> : <Flag className="size-4" />}
-          </motion.div>
-        </div>
-      </div>
-
-      <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="font-display text-xl font-bold tracking-wide text-fg">{phase.title}</h2>
-            {isCurrent && <Pill tone="gold">You are here</Pill>}
-          </div>
-          <div className="mt-0.5 flex items-center gap-2 text-xs text-fg-subtle">
-            <CalendarDays className="size-3.5" /> {dayLabel(phase)} from your start date
-          </div>
-        </div>
-        <div className="ml-auto flex items-center gap-3">
-          <div className="text-right">
-            <div className="text-sm font-semibold text-fg tabular-nums">
-              {done}/{total}
+    <section id={phase.id} className="scroll-mt-24 border-t border-edge-2 pt-6">
+      <div className="grid grid-cols-1 gap-x-10 gap-y-5 lg:grid-cols-[240px_1fr]">
+        <div className="lg:sticky lg:top-20 lg:self-start">
+          <div className="flex items-start gap-4 lg:block">
+            <motion.div
+              className={cn('t-display text-[4.2rem] leading-[0.8] lg:text-[5.2rem]', complete ? 'text-ok' : isCurrent ? 'text-hi' : 'text-edge-2')}
+              animate={complete ? { scale: [1, 1.06, 1] } : {}}
+              transition={{ duration: 0.45 }}
+            >
+              {String(index + 1).padStart(2, '0')}
+            </motion.div>
+            <div className="min-w-0 lg:mt-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="t-label text-low">{dayLabel(phase)}</span>
+                {isCurrent && (
+                  <Tag color="var(--color-paper)" solid>
+                    You are here
+                  </Tag>
+                )}
+                {complete && <Tag color="var(--color-ok)">Complete</Tag>}
+              </div>
+              <h2 className="t-headline mt-2 text-[1.45rem] text-hi">{phase.title}</h2>
+              <div className="mt-3 text-[0.78rem] text-low tabular-nums">
+                <span className="font-bold text-hi">{done}</span>/{total} tasks · {pct(done, total)}%
+              </div>
+              <Segments value={done} total={total} className="mt-2" height={5} color={complete ? 'var(--color-ok)' : 'var(--color-paper)'} />
             </div>
-            <div className="text-[0.7rem] text-fg-subtle">tasks done</div>
           </div>
-          <ProgressRing value={pct(done, total)} size={46} stroke={4}>
-            <span className="text-[0.68rem] font-bold text-fg tabular-nums">{pct(done, total)}%</span>
-          </ProgressRing>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
-        {tasks.map((t) => (
-          <TaskItem key={t.id} task={t} index={phase.ordered ? phase.tasks.indexOf(t) : undefined} />
-        ))}
-        {tasks.length === 0 && (
-          <div className="rounded-xl border border-dashed border-gold-500/20 px-4 py-5 text-center text-sm text-gold-300/80 xl:col-span-2">All {phase.short} tasks are done.</div>
-        )}
+        <div className="grid grid-cols-1 content-start gap-2 xl:grid-cols-2">
+          {tasks.map((t) => (
+            <TaskItem key={t.id} task={t} index={phase.ordered ? phase.tasks.indexOf(t) : undefined} />
+          ))}
+          {tasks.length === 0 && (
+            <div className="well px-4 py-5 text-center text-sm font-semibold text-ok xl:col-span-2" style={{ boxShadow: 'inset 3px 0 0 var(--color-ok)' }}>
+              All {phase.short} tasks are done.
+            </div>
+          )}
+        </div>
       </div>
     </section>
   )
@@ -114,54 +96,42 @@ export function Roadmap() {
 
   return (
     <div>
-      <PageHeader
-        eyebrow="Section 2 · Phased roadmap"
-        title="Roadmap"
-        intro={roadmapIntro}
-        actions={
-          <>
-            <Toggle checked={hideDone} onChange={(v) => setUi({ hideDone: v })} label="Hide completed" />
-          </>
-        }
-      >
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          {phases.map((p) => {
+      <PageHeader eyebrow="Section 2 · Phased roadmap" title="Roadmap" intro={roadmapIntro} actions={<Toggle checked={hideDone} onChange={(v) => setUi({ hideDone: v })} label="Hide completed" />}>
+        <div className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-[4px] border border-edge bg-edge md:grid-cols-4">
+          {phases.map((p, i) => {
             const pr = phaseProgress({ flags, nums }, p)
+            const isCur = cur?.id === p.id
+            const complete = pr.done === pr.total
             return (
-              <a
-                key={p.id}
-                href={`#${p.id}`}
-                className={cn(
-                  'group flex items-center gap-2.5 rounded-xl border px-3 py-2 transition',
-                  cur?.id === p.id ? 'border-gold-400/35 bg-gold-400/[0.07]' : 'border-white/[0.07] bg-white/[0.02] hover:border-white/15',
-                )}
-              >
-                <ProgressRing value={pct(pr.done, pr.total)} size={28} stroke={3} />
-                <span>
-                  <span className="block text-[0.8rem] font-semibold text-fg">{p.short}</span>
-                  <span className="block text-[0.68rem] text-fg-subtle tabular-nums">
-                    {pr.done}/{pr.total} done
+              <a key={p.id} href={`#${p.id}`} className={cn('group block px-4 py-3.5 transition-colors', isCur ? 'bg-raised-3' : 'bg-raised hover:bg-raised-2')}>
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className={cn('t-num text-[1.5rem]', complete ? 'text-ok' : isCur ? 'text-hi' : 'text-low')}>{String(i + 1).padStart(2, '0')}</span>
+                  <span className="text-[0.7rem] text-low tabular-nums">
+                    {pr.done}/{pr.total}
                   </span>
-                </span>
+                </div>
+                <div className="mt-1 truncate text-[0.86rem] font-bold text-hi">{p.short}</div>
+                <Segments value={pr.done} total={pr.total} className="mt-2" height={3} color={complete ? 'var(--color-ok)' : 'var(--color-paper)'} />
               </a>
             )
           })}
-          <div className="ml-auto text-right text-xs text-fg-subtle">
+        </div>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[0.76rem] text-low">
+          <span>
             Started {formatLongDate(startDate)} ·{' '}
-            <Link to="/settings" className="text-gold-400 hover:text-gold-300">
+            <Link to="/settings" className="font-bold text-hi underline decoration-edge-2 underline-offset-4 hover:decoration-paper">
               change
             </Link>
-            <div className="mt-0.5 text-fg-muted">
-              <span className="font-semibold text-fg tabular-nums">{doneAll}</span> of {all.length} roadmap tasks done
-            </div>
-          </div>
+          </span>
+          <span>
+            <span className="font-bold text-hi tabular-nums">{doneAll}</span> of {all.length} roadmap tasks done
+          </span>
         </div>
       </PageHeader>
 
-      <div className="relative space-y-12">
-        <div aria-hidden className="absolute top-3 bottom-3 left-[17px] w-px bg-gradient-to-b from-gold-500/50 via-white/10 to-transparent sm:left-[25px]" />
-        {phases.map((p) => (
-          <PhaseBlock key={p.id} phase={p} isCurrent={cur?.id === p.id} hideDone={hideDone} />
+      <div className="space-y-14">
+        {phases.map((p, i) => (
+          <PhaseBlock key={p.id} phase={p} index={i} isCurrent={cur?.id === p.id} hideDone={hideDone} />
         ))}
       </div>
     </div>

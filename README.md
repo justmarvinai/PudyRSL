@@ -6,6 +6,12 @@ is also shown word for word on the **Full Guide** page.
 
 Dark mode only, desktop-first (it also works on a phone), password-locked, and your progress is saved in your browser.
 
+**Design:** set in [Mona Sans](https://github.com/github/mona-sans) with wide, heavy display headlines. The interface itself is
+monochrome; colour only appears where it means something in Raid — rarity (Rare blue, Epic purple, Legendary orange, Mythical red),
+affinity, buffs (blue) and debuffs (red) with their game icons, content areas (Demon Lord, Hydra, Chimera, each dungeon, Arena),
+Clan Boss difficulty, and done/warning states. Champion names, skills (A1–A3), effects, stats and gear sets in the guide text are
+colour-coded automatically, and hovering a champion, a skill or a [Sourced]/[My call] label shows a tooltip.
+
 ## What's inside
 
 | Page | What you can do |
@@ -39,7 +45,7 @@ If `PUDY_PASSWORD` is missing, the site stays locked and shows setup instruction
 
 `middleware.ts` is Vercel Routing Middleware. It runs before every request, including JS/CSS files, and lets a request through only with a valid
 `HttpOnly`, `Secure` session cookie (an HMAC of your password). Pages without the cookie get the lock screen; files get `401`.
-`robots.txt` is the only public file, and every response asks search engines not to index the site.
+`robots.txt` and the lock screen's own font (`/fonts/`, Mona Sans) are the only public files, and every response asks search engines not to index the site.
 
 ## Your progress
 
@@ -60,7 +66,23 @@ npm run build      # type-check + production build
 
 To try the lock locally, copy `.env.example` to `.env`, set a password, and run `npx vercel dev` (Vercel CLI).
 
-Stack: Vite 8, React 19, TypeScript, Tailwind CSS 4, Motion, Zustand, React Router 7, react-markdown.
+Stack: Vite 8, React 19, TypeScript, Tailwind CSS 4, Motion, Zustand, React Router 7, react-markdown, Mona Sans (self-hosted via Fontsource).
+
+## Game data (raid-data)
+
+There is no official Raid: Shadow Legends API. Portraits, buff/debuff icons, affinity/tome/gem/silver icons, the Demon Lord art,
+and the skill tooltips, base stats, factions and roles of six core champions come from
+[raid-data](https://github.com/McRadane/raid-data) 4.10.1 (MIT; Léo Maradan, originally Goctionni; data from the game and Ayumilove),
+a free static dataset. A small subset is bundled into the site (`src/data/raid-data.json`, `public/rsl/`), so nothing is fetched at runtime.
+
+It is an **April 2021 snapshot** (skill text from game v3.30.2), so:
+
+- Gizmak, Galleus, Ninja, Rathalos, Artak, Ultimate Deathknight and Ruella aren't in it — they show a monogram tile instead of art.
+- Skill text and base stats don't include later reworks; everything from it is labelled, and your guide wins where they differ.
+- Affinities from raid-data are shown as suggestions (“Void · data”) next to the guide's “check in-game”; confirm before relying on them.
+
+To refresh the subset: `npm pack raid-data@4.10.1`, extract it into its own folder, `npm i --no-save sharp`, then
+`node scripts/sync-raid-data.mjs <extracted-package-folder>`.
 
 ## About the data
 

@@ -1,133 +1,109 @@
 import { motion, type HTMLMotionProps } from 'motion/react'
-import { Info, Lightbulb, OctagonAlert, TriangleAlert } from 'lucide-react'
-import { forwardRef, type MouseEvent, type ReactNode } from 'react'
+import { forwardRef, type CSSProperties, type ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 import { LabelTag, Rich } from './Rich'
 
-function trackSpotlight(e: MouseEvent<HTMLElement>) {
-  const el = e.currentTarget
-  const r = el.getBoundingClientRect()
-  el.style.setProperty('--mx', `${e.clientX - r.left}px`)
-  el.style.setProperty('--my', `${e.clientY - r.top}px`)
+type PanelProps = Omit<HTMLMotionProps<'div'>, 'title'> & {
+  title?: ReactNode
+  /** Small label above the title. */
+  kicker?: ReactNode
+  label?: string
+  action?: ReactNode
+  /** Colour bar on the left edge (CSS colour). */
+  accent?: string
+  padded?: boolean
+  bodyClassName?: string
 }
 
-type CardProps = HTMLMotionProps<'div'> & { spotlight?: boolean; padded?: boolean }
-
-export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
-  { className, spotlight = false, padded = true, onMouseMove, children, ...rest },
+/** Flat bordered surface with an optional header row. */
+export const Panel = forwardRef<HTMLDivElement, PanelProps>(function Panel(
+  { title, kicker, label, action, accent, padded = true, className, bodyClassName, children, style, ...rest },
   ref,
 ) {
   return (
     <motion.div
       ref={ref}
-      onMouseMove={(e) => {
-        if (spotlight) trackSpotlight(e)
-        onMouseMove?.(e)
-      }}
-      className={cn('card', spotlight && 'spotlight', padded && 'p-5', className)}
+      className={cn('panel relative', className)}
+      style={{ ...(accent ? { boxShadow: `inset 3px 0 0 ${accent}` } : null), ...(style as CSSProperties) }}
       {...rest}
     >
-      {children}
+      {(title || action || kicker) && (
+        <div className="panel-head">
+          <div className="min-w-0">
+            {kicker && <div className="t-label mb-1 text-low">{kicker}</div>}
+            {title && (
+              <h3 className="t-title flex flex-wrap items-center gap-2 text-[1.02rem] text-hi">
+                {title}
+                {label && <LabelTag label={label} />}
+              </h3>
+            )}
+          </div>
+          {action}
+        </div>
+      )}
+      {padded ? <div className={cn('panel-body', bodyClassName)}>{children as ReactNode}</div> : (children as ReactNode)}
     </motion.div>
   )
 })
 
-export function SectionTitle({
-  eyebrow,
+/** Big section heading with an optional index number. */
+export function SectionHead({
+  index,
   title,
   label,
+  intro,
   action,
-  className,
   id,
+  className,
 }: {
-  eyebrow?: string
+  index?: string
   title: ReactNode
   label?: string
+  intro?: string
   action?: ReactNode
-  className?: string
   id?: string
+  className?: string
 }) {
   return (
-    <div id={id} className={cn('mb-4 flex scroll-mt-24 flex-wrap items-end justify-between gap-3', className)}>
-      <div className="min-w-0">
-        {eyebrow && <div className="eyebrow mb-1">{eyebrow}</div>}
-        <h2 className="flex flex-wrap items-center gap-2 text-[1.05rem] font-semibold tracking-tight text-fg">
-          {title}
-          {label && <LabelTag label={label} />}
+    <div id={id} className={cn('mb-5 flex scroll-mt-24 flex-wrap items-end justify-between gap-4', className)}>
+      <div className="max-w-3xl min-w-0">
+        <h2 className="t-headline flex items-baseline gap-x-3 text-[1.65rem] text-balance text-hi sm:text-[1.9rem]">
+          {index && <span className="t-num shrink-0 text-[0.9em] text-low">{index}</span>}
+          <span className="min-w-0">
+            {title}
+            {label && <LabelTag label={label} className="relative -top-[0.2em] ml-2.5" />}
+          </span>
         </h2>
+        {intro && <Rich as="p" text={intro} className="mt-2 text-[0.92rem] leading-relaxed text-mid" />}
       </div>
       {action}
     </div>
   )
 }
 
-const pillTones = {
-  neutral: 'border-white/10 bg-white/[0.04] text-fg-muted',
-  gold: 'border-gold-500/30 bg-gold-500/10 text-gold-300',
-  ok: 'border-ok/30 bg-ok/10 text-ok',
-  warn: 'border-warn/30 bg-warn/10 text-warn',
-  bad: 'border-bad/30 bg-bad/10 text-bad',
-  info: 'border-info/30 bg-info/10 text-info',
-  rare: 'border-rare/35 bg-rare/10 text-rare',
-  epic: 'border-epic/35 bg-epic/10 text-epic',
-  legendary: 'border-legendary/35 bg-legendary/10 text-legendary',
-  mythical: 'border-mythical/35 bg-mythical/10 text-mythical',
-  magic: 'border-magic/35 bg-magic/10 text-magic',
-  force: 'border-force/35 bg-force/10 text-force',
-  spirit: 'border-spirit/35 bg-spirit/10 text-spirit',
-  void: 'border-void/35 bg-void/10 text-void',
-}
-
-export type PillTone = keyof typeof pillTones
-
-export function Pill({
-  tone = 'neutral',
-  children,
-  className,
-  icon,
-  title,
-}: {
-  tone?: PillTone
-  children: ReactNode
-  className?: string
-  icon?: ReactNode
-  title?: string
-}) {
+/** Coloured tag; pass any CSS colour (e.g. var(--color-epic)). */
+export function Tag({ color, children, className, solid = false, title }: { color?: string; children: ReactNode; className?: string; solid?: boolean; title?: string }) {
   return (
-    <span
-      title={title}
-      className={cn(
-        'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.7rem] font-semibold whitespace-nowrap',
-        pillTones[tone],
-        className,
-      )}
-    >
-      {icon}
+    <span title={title} className={cn('tag', solid && 'tag-solid', className)} style={color ? ({ '--c': color } as CSSProperties) : undefined}>
       {children}
     </span>
   )
 }
 
 export function Kbd({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <kbd
-      className={cn(
-        'inline-flex h-5 min-w-5 items-center justify-center rounded-md border border-white/10 bg-white/[0.06] px-1.5 font-sans text-[0.68rem] font-semibold text-fg-muted shadow-[inset_0_-1px_0_rgb(255_255_255/0.06)]',
-        className,
-      )}
-    >
-      {children}
-    </kbd>
-  )
+  return <kbd className={cn('kbd', className)}>{children}</kbd>
 }
 
-const calloutTones = {
-  info: { icon: Info, cls: 'border-info/25 bg-info/[0.06]', ic: 'text-info' },
-  tip: { icon: Lightbulb, cls: 'border-gold-500/25 bg-gold-500/[0.06]', ic: 'text-gold-400' },
-  warn: { icon: TriangleAlert, cls: 'border-warn/25 bg-warn/[0.06]', ic: 'text-warn' },
-  danger: { icon: OctagonAlert, cls: 'border-bad/25 bg-bad/[0.06]', ic: 'text-bad' },
+const calloutColor = {
+  info: 'var(--color-buff)',
+  tip: 'var(--color-paper)',
+  warn: 'var(--color-warn)',
+  danger: 'var(--color-bad)',
 }
 
+const calloutLabel = { info: 'Note', tip: 'Tip', warn: 'Careful', danger: "Don't" }
+
+/** Flat note with a coloured edge and a short label. */
 export function Callout({
   tone = 'info',
   title,
@@ -135,69 +111,37 @@ export function Callout({
   children,
   className,
 }: {
-  tone?: keyof typeof calloutTones
+  tone?: keyof typeof calloutColor
   title?: string
   text?: string
   children?: ReactNode
   className?: string
 }) {
-  const t = calloutTones[tone]
-  const Icon = t.icon
+  const c = calloutColor[tone]
   return (
-    <div className={cn('flex gap-3 rounded-xl border px-4 py-3 text-[0.84rem] leading-relaxed text-fg-muted', t.cls, className)}>
-      <Icon className={cn('mt-0.5 size-4 shrink-0', t.ic)} />
-      <div className="min-w-0">
-        {title && <div className="mb-0.5 font-semibold text-fg">{title}</div>}
-        {text && <Rich text={text} />}
-        {children}
+    <div className={cn('well px-4 py-3 text-[0.86rem] leading-relaxed text-mid', className)} style={{ boxShadow: `inset 3px 0 0 ${c}` }}>
+      <div className="t-label mb-1" style={{ color: c }}>
+        {title ?? calloutLabel[tone]}
       </div>
+      {text && <Rich text={text} />}
+      {children}
     </div>
   )
 }
 
-export function Divider({ className }: { className?: string }) {
-  return <div className={cn('hairline my-4', className)} />
-}
-
-export function Stat({
-  label,
-  value,
-  sub,
-  icon,
-  tone = 'gold',
-  className,
-}: {
-  label: string
-  value: ReactNode
-  sub?: ReactNode
-  icon?: ReactNode
-  tone?: 'gold' | 'ok' | 'info' | 'warn' | 'epic' | 'bad'
-  className?: string
-}) {
-  const ring = {
-    gold: 'from-gold-500/25 text-gold-300',
-    ok: 'from-ok/20 text-ok',
-    info: 'from-info/20 text-info',
-    warn: 'from-warn/20 text-warn',
-    epic: 'from-epic/20 text-epic',
-    bad: 'from-bad/20 text-bad',
-  }[tone]
+/** Label + big number + note, used in stat strips. */
+export function Stat({ label, value, sub, className, color }: { label: ReactNode; value: ReactNode; sub?: ReactNode; className?: string; color?: string }) {
   return (
-    <div className={cn('flex items-start gap-3', className)}>
-      {icon && (
-        <div className={cn('grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br to-transparent ring-1 ring-white/10', ring)}>
-          {icon}
-        </div>
-      )}
-      <div className="min-w-0">
-        <div className="eyebrow">{label}</div>
-        <div className="mt-0.5 text-xl font-semibold tracking-tight text-fg tabular-nums">{value}</div>
-        {sub && <div className="mt-0.5 text-xs text-fg-subtle">{sub}</div>}
+    <div className={cn('min-w-0', className)}>
+      <div className="t-label text-low">{label}</div>
+      <div className="t-num mt-2 text-[2rem] sm:text-[2.3rem]" style={color ? { color } : undefined}>
+        {value}
       </div>
+      {sub && <div className="mt-1.5 text-[0.75rem] text-low">{sub}</div>}
     </div>
   )
 }
 
 export function EmptyHint({ children }: { children: ReactNode }) {
-  return <div className="rounded-xl border border-dashed border-white/10 px-4 py-6 text-center text-sm text-fg-subtle">{children}</div>
+  return <div className="rounded-[3px] border border-dashed border-edge-2 px-4 py-6 text-center text-sm text-low">{children}</div>
 }
